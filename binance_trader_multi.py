@@ -31,6 +31,12 @@ class OrderStatus(Enum):
     OPEN_ORDER = 'OPEN_ORDER',
     POSITION = 'POSITION'
 
+symbol_pair_trade_counter = {}
+symbol_pair_order_count = {}
+symbol_pair_target_order_count = {}
+symbol_pair_order_status = {}
+symbol_pair_target_order_status = {}
+
 buy_timeframe = {}
 buy_order_type = {}
 sell_timeframe = {}
@@ -736,38 +742,13 @@ if __name__ == "__main__":
                     close_p = chart["c"][-1]
                     quantity = order_size[symbol] / close_p
 
-                    if symbol_pair_target_order_count[symbol] > 0:
 
-                        status = binance.check_order_status(symbol, symbol_pair_target_order_count[symbol])
-                        if status != 'FILLED':
-                            new_take_profit_order = binance.update_take_profit(symbol,
-                                                                               symbol_pair_target_order_count[symbol],
-                                                                               quantity, latest_upper_bband_price,
-                                                                               symbol_pair_target_order_count)
-                        else:
-                            symbol_pair_order_count[symbol] = 0
-                            symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
-                            symbol_pair_target_order_count[symbol] = 0
-                            symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
+                    if symbol_pair_order_count[symbol] > 0:
 
-
-                    if high_hit:
-
-                        if bbands_ok:  # Buy condition met
-
-                            if buy_order_type[symbol] == "LMT":
-                                result = binance.Buy(symbol, quantity, latest_lower_bband_price)
-                            else:
-                                # Else submitting MARKET order at current price
-                                result = binance.Buy(symbol, quantity, 0)
-
-                            binance.update_order_id_for_symbol_pair(result, symbol)
+                            position_status = binance.check_order_status(symbol, symbol_pair_target_order_count[symbol])
                             order_id = symbol_pair_order_count[symbol]
 
-                            # Check the status of the order
-                            status = binance.check_order_status(symbol, order_id)
-
-                            if status == 'FILLED':
+                            if position_status == 'FILLED':
 
                                 take_profit_response = binance.set_take_profit(symbol,
                                                                                quantity,
@@ -788,10 +769,42 @@ if __name__ == "__main__":
                                     std_log("Balance is full")
 
                             else:
+
                                 new_order_response = binance.replace_position_with_new_limit_order(symbol,
                                                                               order_id,
                                                                               quantity,
                                                                               latest_lower_bband_price)
+
+
+                            if (position_status == 'FILLED'
+                                    and symbol_pair_target_order_count[symbol] > 0):
+
+                                take_profit_status = binance.check_order_status(symbol, symbol_pair_target_order_count[symbol])
+
+                                if take_profit_status != 'FILLED':
+                                    new_take_profit_order = binance.update_take_profit(symbol,
+                                                                                       symbol_pair_target_order_count[symbol],
+                                                                                       quantity,
+                                                                                       latest_upper_bband_price,
+                                                                                       symbol_pair_target_order_count)
+                                else:
+                                    symbol_pair_order_count[symbol] = 0
+                                    symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                    symbol_pair_target_order_count[symbol] = 0
+                                    symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
+
+
+                    if high_hit:
+
+                        if bbands_ok:  # Buy condition met
+
+                            if buy_order_type[symbol] == "LMT":
+                                result = binance.Buy(symbol, quantity, latest_lower_bband_price)
+                            else:
+                                # Else submitting MARKET order at current price
+                                result = binance.Buy(symbol, quantity, 0)
+
+                            binance.update_order_id_for_symbol_pair(result, symbol)
 
                         else:
                             print("Bollinger Band Condition Not Met. No Order/Positions Set. "
