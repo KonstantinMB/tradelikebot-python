@@ -37,15 +37,6 @@ symbol_pair_target_order_count = {}
 symbol_pair_order_status = {}
 symbol_pair_target_order_status = {}
 
-buy_timeframe = {}
-buy_order_type = {}
-sell_timeframe = {}
-sell_order_type = {}
-order_size = {}
-h_period = {}
-l_period = {}
-buy_limit = 0
-
 symbols = []
 
 def cur_time():
@@ -357,9 +348,9 @@ class Binance():
         return price
 
     def boundaryRemaining(self, tf):
+
         # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"
-        #t = datetime.datetime.now()
-        t = datetime.datetime.utcnow()
+        t = datetime.datetime.now(datetime.UTC)
         if tf == "1m":
             next_t = (t + datetime.timedelta(minutes=1)).replace(second=0, microsecond=0)
         elif tf == "3m":
@@ -592,13 +583,13 @@ if __name__ == "__main__":
 
     # Secrets & Parameters 👇🔐
     CONFIG_PATH = os.getenv('CONFIG_PATH')
-    EXCEL_NAME = "Bot_config.xlsx"
-    APIKEY =  os.getenv('API_KEY')
-    SECRETKEY = os.getenv('API_SECRET')
+    EXCEL_NAME = "/Bot_config.xlsx"
+    APIKEY = os.getenv('TEST_API_KEY')
+    SECRETKEY = os.getenv('TEST_API_SECRET')
 
     # 0. Get Configuration ====================================#
     strategies = []
-    buy_timeframe = "1h"
+    buy_timeframe = "1m"
     tdelta_conv = {"1m": datetime.timedelta(minutes=1), "3m": datetime.timedelta(minutes=3),
                    "5m": datetime.timedelta(minutes=5), "15m": datetime.timedelta(minutes=15),
                    "30m": datetime.timedelta(minutes=30), "1h": datetime.timedelta(hours=1),
@@ -607,6 +598,16 @@ if __name__ == "__main__":
                    "12h": datetime.timedelta(hours=12), "1d": datetime.timedelta(days=1),
                    "3d": datetime.timedelta(days=3), "1w": datetime.timedelta(days=7)}
     set_filled = [False, ] * 6
+
+
+    buy_timeframe = {}
+    buy_order_type = {}
+    sell_timeframe = {}
+    sell_order_type = {}
+    order_size = {}
+    h_period = {}
+    l_period = {}
+    buy_limit = 0
 
     # 0.1. Read excel
     config = openpyxl.load_workbook(CONFIG_PATH + EXCEL_NAME)
@@ -718,10 +719,10 @@ if __name__ == "__main__":
 
                     chart, chart_df = binance.getChart(symbol,
                                                        buy_timeframe[symbol],
-                                                       start_t=datetime.datetime.utcnow() - buy_timedelta[symbol]
+                                                       start_t=datetime.datetime.now(datetime.UTC) - buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
 
-                    if chart["t"][-1] > datetime.datetime.utcnow() - buy_timedelta[symbol] / 2:
+                    if chart["t"][-1] > datetime.datetime.now(datetime.UTC) - buy_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
                         chart["o"] = chart["o"][:-1]
                         chart["h"] = chart["h"][:-1]
@@ -732,7 +733,7 @@ if __name__ == "__main__":
                     high_hit = chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.utcnow() - sell_timedelta[symbol] / 2:
+                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.now(datetime.UTC) - sell_timedelta[symbol] / 2:
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
 
@@ -822,10 +823,10 @@ if __name__ == "__main__":
 
                     chart, chart_df = binance.getChart(symbol,
                                                        buy_timeframe[symbol],
-                                                       start_t=datetime.datetime.utcnow() - buy_timedelta[symbol]
+                                                       start_t=datetime.datetime.now(datetime.UTC) - buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
 
-                    if chart["t"][-1] > datetime.datetime.utcnow() - sell_timedelta[symbol] / 2:
+                    if chart["t"][-1] > datetime.datetime.now(datetime.UTC) - sell_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
                         chart["o"] = chart["o"][:-1]
                         chart["h"] = chart["h"][:-1]
@@ -840,7 +841,7 @@ if __name__ == "__main__":
                                                                min(chart["c"][-l_period[symbol] - 1:-1])))
 
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.utcnow() - sell_timedelta[symbol] / 2:
+                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.now(datetime.UTC) - sell_timedelta[symbol] / 2:
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
 

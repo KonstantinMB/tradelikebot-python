@@ -2,4 +2,4 @@
 .env
 log*
 balance.txt
-venv
+/spot-bot-venv
