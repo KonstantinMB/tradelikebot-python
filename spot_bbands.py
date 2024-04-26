@@ -80,7 +80,7 @@ class Binance():
     baseurl = ""
     tick_sizes = {}
     qty_steps = {}
-    recv_window = 1000000000
+    recv_window = 59999
     symbol_base = {}  # base/quote
     symbol_quote = {}
 
@@ -547,11 +547,11 @@ class Binance():
         if latest_close <= latest_lower_band:
             std_log(f"[{symbol_pair}] Latest Close Price {latest_close} is below or equal to "
                     f"the Lower Latest Bollinger Band {latest_lower_band}")
-            return True, latest_lower_band, latest_upper_band
-        else:
-            std_log(f"[{symbol_pair}]  Bollinger Bands filter condition not met "
-                    f"(Latest Lower Bollinger Band: {latest_lower_band} / Latest Close: {latest_close})")
             return False, latest_lower_band, latest_upper_band
+        else:
+            std_log(f"[{symbol_pair}]  Bollinger Bands filter condition met "
+                    f"(Latest Lower Bollinger Band: {latest_lower_band} / Latest Close: {latest_close})")
+            return True, latest_lower_band, latest_upper_band
 
     def check_sell_signal(self, candles_chart_df: pd.DataFrame, symbol_pair):
 
@@ -730,7 +730,7 @@ if __name__ == "__main__":
                         chart["c"] = chart["c"][:-1]
                         chart["v"] = chart["v"][:-1]
 
-                    high_hit = chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
+
 
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
                     if chart_df.empty or chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(datetime.timezone.utc)- sell_timedelta[symbol] / 2:
@@ -740,8 +740,19 @@ if __name__ == "__main__":
                     bbands_ok, latest_lower_bband_price, latest_upper_bband_price = binance.check_buy_signal(
                         chart_df, symbol)
 
+                    chart_df["rolling_mean"] = chart_df['Close'].rolling(window=20).mean()
+                    chart_df["rolling_std"] = chart_df['Close'].rolling(window=20).std()
+                    chart_df["upper_band"] = chart_df["rolling_mean"] + (2 * chart_df["rolling_std"])
+                    chart_df["lower_band"] = chart_df["rolling_mean"] - (2 * chart_df["rolling_std"])
+
+
                     close_p = chart["c"][-1]
                     quantity = order_size[symbol] / close_p
+
+
+                    #Here I will add all the necessary conditions from the strategy backtest: Bollinger Bands, EMA, etc.
+                    conditions_met = 1 # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
+
 
 
                     if symbol_pair_order_count[symbol] > 0:
@@ -795,7 +806,7 @@ if __name__ == "__main__":
                                     symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
 
 
-                    if high_hit:
+                    if conditions_met:
 
                         if bbands_ok:  # Buy condition met
 
