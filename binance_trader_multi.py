@@ -350,7 +350,7 @@ class Binance():
     def boundaryRemaining(self, tf):
 
         # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"
-        t = datetime.datetime.now(datetime.UTC)
+        t = datetime.datetime.now(datetime.timezone.utc)
         if tf == "1m":
             next_t = (t + datetime.timedelta(minutes=1)).replace(second=0, microsecond=0)
         elif tf == "3m":
@@ -719,10 +719,10 @@ if __name__ == "__main__":
 
                     chart, chart_df = binance.getChart(symbol,
                                                        buy_timeframe[symbol],
-                                                       start_t=datetime.datetime.now(datetime.UTC) - buy_timedelta[symbol]
+                                                       start_t=datetime.datetime.now(datetime.timezone.utc) - buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
 
-                    if chart["t"][-1] > datetime.datetime.now(datetime.UTC) - buy_timedelta[symbol] / 2:
+                    if chart["t"][-1].replace(tzinfo=datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - buy_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
                         chart["o"] = chart["o"][:-1]
                         chart["h"] = chart["h"][:-1]
@@ -733,7 +733,7 @@ if __name__ == "__main__":
                     high_hit = chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.now(datetime.UTC) - sell_timedelta[symbol] / 2:
+                    if chart_df.empty or chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(datetime.timezone.utc)- sell_timedelta[symbol] / 2:
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
 
@@ -811,7 +811,7 @@ if __name__ == "__main__":
                             print("Bollinger Band Condition Not Met. No Order/Positions Set. "
                                   "Check logs for more information.")
                     else:
-                        std_log("[%s]  Highest close does not met" % (symbol,))
+                        std_log("[%s]  Additional Conditions not met" % (symbol,))
 
                 old_remain_buy[symbol] = remain
 
@@ -823,10 +823,10 @@ if __name__ == "__main__":
 
                     chart, chart_df = binance.getChart(symbol,
                                                        buy_timeframe[symbol],
-                                                       start_t=datetime.datetime.now(datetime.UTC) - buy_timedelta[symbol]
+                                                       start_t=datetime.datetime.now(datetime.timezone.utc) - buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
 
-                    if chart["t"][-1] > datetime.datetime.now(datetime.UTC) - sell_timedelta[symbol] / 2:
+                    if chart["t"][-1].replace(tzinfo=datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - sell_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
                         chart["o"] = chart["o"][:-1]
                         chart["h"] = chart["h"][:-1]
@@ -841,7 +841,7 @@ if __name__ == "__main__":
                                                                min(chart["c"][-l_period[symbol] - 1:-1])))
 
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.now(datetime.UTC) - sell_timedelta[symbol] / 2:
+                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.now(datetime.timezone.utc) - sell_timedelta[symbol] / 2:
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
 
