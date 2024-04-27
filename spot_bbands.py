@@ -547,8 +547,8 @@ class Binance():
         # Calculate Bollinger Bands
         rolling_mean = close_prices.rolling(window=20).mean()
         rolling_std = close_prices.rolling(window=20).std()
-        upper_band = rolling_mean + (1 * rolling_std)
-        lower_band = rolling_mean - (1 * rolling_std)
+        upper_band = rolling_mean + (2 * rolling_std)
+        lower_band = rolling_mean - (2 * rolling_std)
 
         latest_close = closes[-1]
         latest_upper_band = upper_band.iloc[-1]
