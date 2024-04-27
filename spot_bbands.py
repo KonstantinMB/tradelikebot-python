@@ -29,7 +29,6 @@ import os
 
 load_dotenv()
 
-
 class OrderStatus(Enum):
     OPEN_ORDER = 'OPEN_ORDER',
     POSITION = 'POSITION'
@@ -483,17 +482,7 @@ class Binance():
             std_log(f"[{symbol_pair}] Error placing new take profit order. Error Info: {e}")
             return None
 
-    def check_order_status(self, symbol_pair, order_id, demo):
-        # Configure API key and secret for demo or production
-        api_key = 'srltFwZXc3FduP5wzsRNnHsHa1heMvuobUaQHwmJX4BJk8uAtPjtRYnQ43zY3cUj' if demo else 'your_production_api_key'
-        api_secret = '76SoGuuVfE4yLnWvVhWg23sDQrn34Qtk7oknZ2wIz0dNqZ0kieewmopcewwPCGOt' if demo else 'your_production_api_secret'
-
-        # Initialize client
-        client = Client(api_key, api_secret)
-
-        # Set the base URL for the testnet if demo
-        if demo:
-            client.API_URL = 'https://testnet.binance.vision/api'
+    def check_order_status(self, symbol_pair, order_id):
 
         try:
             # Using the client to fetch order status
@@ -677,10 +666,22 @@ if __name__ == "__main__":
         sell_timedelta[symbol] = tdelta_conv[sell_timeframe[symbol]]
     ema_timedelta = tdelta_conv[ema_timeframe]
 
-    # 1. API init
+    test_api_key = os.getenv('TEST_API_KEY')
+    test_api_secret = os.getenv('TEST_API_SECRET')
+    api_key = os.getenv('API_KEY')
+    api_secret = os.getenv('API_SECRET')
+
+    # Legacy Client Initialization
     binance = Binance(test=demo, apikey=APIKEY, secretkey=SECRETKEY)
 
-    # 2. Balance recovery
+    # Binance Library Client Initialization
+    client = Client()
+    if demo:
+        client = Client(api_key=test_api_key, api_secret=test_api_secret, testnet=demo)
+    else:
+        client = Client(api_key=api_key, api_secret=api_secret, testnet=demo)
+
+    # Balance recovery
     balance = []
     if not os.path.isfile(CONFIG_PATH + "balance.txt"):
         fout = open(CONFIG_PATH + "balance.txt", "w")
@@ -776,8 +777,7 @@ if __name__ == "__main__":
 
                     if symbol_pair_order_count[symbol] > 0:
 
-                        position_status = binance.check_order_status(symbol, symbol_pair_target_order_count[symbol],
-                                                                     demo)
+                        position_status = binance.check_order_status(symbol, symbol_pair_order_count[symbol])
                         order_id = symbol_pair_order_count[symbol]
 
                         if position_status == 'FILLED':
@@ -810,8 +810,7 @@ if __name__ == "__main__":
                         if position_status == 'FILLED' and symbol_pair_target_order_count[symbol] > 0:
 
                             take_profit_status = binance.check_order_status(symbol,
-                                                                            symbol_pair_target_order_count[symbol],
-                                                                            demo)
+                                                                            symbol_pair_target_order_count[symbol])
 
                             if take_profit_status != 'FILLED':
                                 new_take_profit_order = binance.update_take_profit(symbol,
@@ -826,7 +825,7 @@ if __name__ == "__main__":
                                 symbol_pair_target_order_count[symbol] = 0
                                 symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
 
-                    if conditions_met:
+                    if conditions_met and symbol_pair_order_count[symbol] == 0:
 
                         if bbands_ok:  # Buy condition met
 
@@ -907,7 +906,7 @@ if __name__ == "__main__":
                                 result = binance.Sell(symbol, quantity, 0)
 
                             orderId = result["orderId"]
-                            # order_filled = binance.OrderWait(symbol, orderId)
+                            order_filled = binance.OrderWait(symbol, orderId)
 
                             if order_filled:
                                 # Update balance if order filled
