@@ -547,8 +547,8 @@ class Binance():
         # Calculate Bollinger Bands
         rolling_mean = close_prices.rolling(window=20).mean()
         rolling_std = close_prices.rolling(window=20).std()
-        upper_band = rolling_mean + (2 * rolling_std)
-        lower_band = rolling_mean - (2 * rolling_std)
+        upper_band = rolling_mean + (1 * rolling_std)
+        lower_band = rolling_mean - (1 * rolling_std)
 
         latest_close = closes[-1]
         latest_upper_band = upper_band.iloc[-1]
@@ -584,11 +584,11 @@ class Binance():
         if latest_close >= latest_upper_band:
             std_log(f"[{symbol_pair}] Latest Close Price {latest_close} is above or equal to "
                     f"the Upper Latest Bollinger Band {latest_upper_band}")
-            return True, latest_lower_band, latest_upper_band
-        else:
-            std_log(f"[{symbol_pair}]  Bollinger Bands filter condition not met "
-                    f"(Latest Upper Bollinger Band: {latest_upper_band} / Latest Close: {latest_close})")
             return False, latest_lower_band, latest_upper_band
+        else:
+            std_log(f"[{symbol_pair}]  Bollinger Bands filter condition met "
+                    f"(Latest Upper Bollinger Band: {latest_upper_band} / Latest Close: {latest_close})")
+            return True, latest_lower_band, latest_upper_band
 
 
 if __name__ == "__main__":
@@ -596,8 +596,8 @@ if __name__ == "__main__":
     # Secrets & Parameters 👇🔐
     CONFIG_PATH = os.getenv('CONFIG_PATH')
     EXCEL_NAME = "/Bot_config.xlsx"
-    APIKEY = os.getenv('TEST_API_KEY')
-    SECRETKEY = os.getenv('TEST_API_SECRET')
+    APIKEY = os.getenv('API_KEY')
+    SECRETKEY = os.getenv('API_SECRET')
 
     # 0. Get Configuration ====================================#
     strategies = []
@@ -866,14 +866,14 @@ if __name__ == "__main__":
                         chart["c"] = chart["c"][:-1]
                         chart["v"] = chart["v"][:-1]
 
-                    low_hit = chart["c"][-1] <= min(chart["c"][-l_period[symbol] - 1:-1])
+                    exit_conditions_met = True # chart["c"][-1] <= min(chart["c"][-l_period[symbol] - 1:-1])
 
                     std_log("[%s] Bar close:%g / Lowest:%g" % (symbol,
                                                                chart["c"][-1],
                                                                min(chart["c"][-l_period[symbol] - 1:-1])))
 
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1] > datetime.datetime.now(datetime.timezone.utc) - \
+                    if chart_df.empty or chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(datetime.timezone.utc) - \
                             sell_timedelta[symbol] / 2:
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
@@ -881,7 +881,9 @@ if __name__ == "__main__":
                     bbands_ok, latest_lower_bband_price, latest_upper_bband_price = binance.check_sell_signal(
                         chart_df, symbol)
 
-                    if low_hit:  # Sell condition met
+
+                    # Here I will add all the necessary EXIT conditions from the strategy backtest: Bollinger Bands, EMA, etc.
+                    if exit_conditions_met:  # Sell condition met
 
                         if bbands_ok:
 
