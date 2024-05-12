@@ -22,12 +22,17 @@ import pandas as pd
 from enum import Enum
 from pandas import DataFrame, Series
 from binance.client import Client, BaseClient
-
+import numpy as np  
 # Feeding auth
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+#Strategy Parameters
+ema_short_period = 45 
+ema_long_period = 100
+regime_filter = 480
 
 class OrderStatus(Enum):
     OPEN_ORDER = 'OPEN_ORDER',
@@ -745,6 +750,8 @@ if __name__ == "__main__":
                                                        start_t=datetime.datetime.now(datetime.timezone.utc) -
                                                                buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
+                    
+                    chart_d, chart_df_d = binance.getChart(symbol, "1d",  start_t=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365))
 
                     if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
                             buy_timedelta[symbol] / 2:
@@ -768,12 +775,61 @@ if __name__ == "__main__":
                     chart_df["rolling_std"] = chart_df['Close'].rolling(window=20).std()
                     chart_df["upper_band"] = chart_df["rolling_mean"] + (2 * chart_df["rolling_std"])
                     chart_df["lower_band"] = chart_df["rolling_mean"] - (2 * chart_df["rolling_std"])
+                    chart_df["ema_short_period"] = chart_df['Close'].ewm(span=ema_short_period).mean()
+                    chart_df["ema_long_period"] = chart_df['Close'].ewm(span=ema_long_period).mean()
+                    chart_df["ema_regime"] =  chart_df['Close'].ewm(span=regime_filter).mean()
+
+                    chart_df["ema_trend_filter"] = chart_df["ema_short_period"] > chart_df["ema_long_period"]
+                    chart_df["ema_regime_filter"] = chart_df["Close"] > chart_df["ema_regime"]
+                    chart_df["bbands_width_filter"] = np.where(chart_df["upper_band"]/chart_df["lower_band"] > 1.03, True, False)
 
                     close_p = chart["c"][-1]
                     quantity = order_size[symbol] / close_p
 
+                    # Calculate the short-term (12-period) exponential moving average (EMA)
+                    short_ema = chart_df['Close'].ewm(span=12, adjust=False).mean()
+
+                    # Calculate the long-term (26-period) exponential moving average (EMA)
+                    long_ema = chart_df['Close'].ewm(span=26, adjust=False).mean()
+
+                    # Calculate the MACD line
+                    macd_line = short_ema - long_ema
+
+                    # Calculate the signal line (9-period EMA of the MACD line)
+                    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+
+                    # Calculate the MACD histogram
+                    macd_histogram = macd_line - signal_line
+
+                    # Add MACD indicators to the DataFrame
+                    chart_df['MACD Line'] = macd_line
+                    chart_df['Signal Line'] = signal_line
+                    chart_df['MACD Histogram'] = macd_histogram
+
+                    # Add a column indicating whether MACD histogram is above 0 or not
+                    chart_df['MACD Above 0'] = chart_df['MACD Histogram'] > 0
+
+                    # Add a column indicating crossover points of MACD and Signal lines
+                    chart_df['MACD_Crossover'] = np.where((chart_df['MACD Line'] > chart_df['Signal Line']) & (
+                                chart_df['MACD Line'].shift(1) < chart_df['Signal Line'].shift(1)), 1,
+                                                          np.where((chart_df['MACD Line'] < chart_df['Signal Line']) & (
+                                                                      chart_df['MACD Line'].shift(1) > chart_df[
+                                                                  'Signal Line'].shift(1)), -1, 0))
+
+
+                    #last_day_data = chart_df_d.iloc[-1]
+
+                    #AND (BBandTop_/BBandBot_) -1 > MinBands   AND  Hist_d_stock > 0 AND C > from_peak * period_high_week  AND   C > MA(C,480) AND EMA(C,SEMAsFilter) > EMA(C,LEMAsFilter) 
+
+                    conditions_met = 0
+
                     #Here I will add all the necessary conditions from the strategy backtest: Bollinger Bands, EMA, etc.
-                    conditions_met = 1  # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
+                    conditions_met = chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1.03 and \
+                                     chart_df["ema_regime_filter"].iloc[-1] and \
+                                     chart_df["ema_trend_filter"].iloc[-1]
+                   
+
+                     # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
                     if symbol_pair_order_count[symbol] > 0:
 
@@ -841,7 +897,7 @@ if __name__ == "__main__":
                             print("Bollinger Band Condition Not Met. No Order/Positions Set. "
                                   "Check logs for more information.")
                     else:
-                        std_log("[%s]  Additional Conditions not met" % (symbol,))
+                        std_log("[%s]  Additional Conditions not met. Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
 
                 old_remain_buy[symbol] = remain
 
