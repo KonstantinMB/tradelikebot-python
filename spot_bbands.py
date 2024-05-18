@@ -412,7 +412,7 @@ class Binance():
         lower_band = rolling_mean - (rolling_std * num_std)
         return upper_band, lower_band
 
-    def replace_position_with_new_limit_order(self, symbol_pair, order_id, buy_amount, new_price):
+    def replace_position_with_new_limit_order(self, symbol_pair, side, order_id, buy_amount, new_price):
 
         try:
             # First, cancel the original order
@@ -423,7 +423,12 @@ class Binance():
             cancel_response = self.send_signed_request("DELETE", "/api/v3/order", cancel_payload)
             std_log(f"[{symbol_pair}] Original order canceled. Info: {cancel_response}")
 
-            new_order = self.Buy(symbol, quantity, latest_lower_bband_price)
+            new_order = {}
+            if side == 'BUY':
+                new_order = self.Buy(symbol, buy_amount, new_price)
+            elif side == 'SELL':
+                new_order = self.Sell(symbol, buy_amount, new_price)
+
             symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
             return new_order
 
@@ -439,11 +444,11 @@ class Binance():
 
         return True  # Continue running-
 
-    def set_take_profit(self, symbol_pair, buy_amount, take_profit_price, symbol_pair_target_order_count):
+    def set_take_profit(self, symbol_pair, side, buy_amount, take_profit_price, symbol_pair_target_order_count):
 
         payload = {
             "symbol": symbol,
-            "side": "SELL",
+            "side": side,
             "type": "LIMIT",
             "timeInForce": "GTC",
             "quantity": self.qtyRound(symbol, buy_amount),
@@ -458,7 +463,7 @@ class Binance():
             std_log(f"[{symbol_pair}] Error placing take_profit for order. Error Info: {e}")
             return None
 
-    def update_take_profit(self, symbol_pair, order_id, new_buy_amount, new_take_profit_price,
+    def update_take_profit(self, symbol_pair, side, order_id, new_buy_amount, new_take_profit_price,
                            symbol_pair_target_order_count):
 
         # Step 1: Cancel the existing order
@@ -467,7 +472,7 @@ class Binance():
         # Step 2: Place a new take profit order with the new target price
         new_payload = {
             "symbol": symbol_pair,
-            "side": "SELL",
+            "side": side,
             "type": "LIMIT",
             "timeInForce": "GTC",
             "quantity": self.qtyRound(symbol_pair, new_buy_amount),
@@ -522,7 +527,7 @@ class Binance():
 
         if buy_order and "orderId" in buy_order:
             # Order placed successfully, now place take profit order
-            take_profit = self.set_take_profit(symbol_pair, quantity, upper_band)
+            take_profit = self.set_take_profit(symbol_pair, 'BUY', quantity, upper_band)
 
             return buy_order, take_profit
 
@@ -537,7 +542,7 @@ class Binance():
 
         if buy_order and "orderId" in buy_order:
             # Order placed successfully, now place take profit order
-            take_profit = self.set_take_profit(symbol_pair, quantity, lower_band)
+            take_profit = self.set_take_profit(symbol_pair, 'BUY', quantity, lower_band)
 
             return buy_order, take_profit
 
@@ -751,8 +756,6 @@ if __name__ == "__main__":
                                                                buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
                     
-                    chart_d, chart_df_d = binance.getChart(symbol, "1d",  start_t=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365))
-
                     if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
                             buy_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
@@ -839,6 +842,7 @@ if __name__ == "__main__":
                         if position_status == 'FILLED':
 
                             take_profit_response = binance.set_take_profit(symbol,
+                                                                           'BUY',
                                                                            quantity,
                                                                            latest_upper_bband_price,
                                                                            symbol_pair_target_order_count)
@@ -859,6 +863,7 @@ if __name__ == "__main__":
                         else:
 
                             new_order_response = binance.replace_position_with_new_limit_order(symbol,
+                                                                                               'BUY',
                                                                                                order_id,
                                                                                                quantity,
                                                                                                latest_lower_bband_price)
@@ -870,6 +875,7 @@ if __name__ == "__main__":
 
                             if take_profit_status != 'FILLED':
                                 new_take_profit_order = binance.update_take_profit(symbol,
+                                                                                   'BUY',
                                                                                    symbol_pair_target_order_count[
                                                                                        symbol],
                                                                                    quantity,
@@ -894,15 +900,17 @@ if __name__ == "__main__":
                             binance.update_order_id_for_symbol_pair(result, symbol)
 
                         else:
-                            print("Bollinger Band Condition Not Met. No Order/Positions Set. "
+                            print("Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set. "
                                   "Check logs for more information.")
                     else:
-                        std_log("[%s]  Additional Conditions not met. Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
+                        std_log("[%s]  Additional Conditions not met for BUY position/order. "
+                                "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
 
                 old_remain_buy[symbol] = remain
 
             # 3.2. Sell Routine
             elif exist_in_balance:  # Check if balance has any position
+
                 remain = binance.boundaryRemaining(sell_timeframe[symbol])
                 showed_remain = min(remain, showed_remain)  # Remain time to sell candle closing
                 if old_remain_sell[symbol] < remain:  # Get into new candle
@@ -913,8 +921,8 @@ if __name__ == "__main__":
                                                                buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
 
-                    if chart["t"][-1].replace(tzinfo=datetime.timezone.utc) > datetime.datetime.now(
-                            datetime.timezone.utc) - sell_timedelta[symbol] / 2:
+                    if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
+                            buy_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
                         chart["o"] = chart["o"][:-1]
                         chart["h"] = chart["h"][:-1]
@@ -922,62 +930,143 @@ if __name__ == "__main__":
                         chart["c"] = chart["c"][:-1]
                         chart["v"] = chart["v"][:-1]
 
-                    exit_conditions_met = True # chart["c"][-1] <= min(chart["c"][-l_period[symbol] - 1:-1])
-
-                    std_log("[%s] Bar close:%g / Lowest:%g" % (symbol,
-                                                               chart["c"][-1],
-                                                               min(chart["c"][-l_period[symbol] - 1:-1])))
-
                     # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(datetime.timezone.utc) - \
-                            sell_timedelta[symbol] / 2:
+                    if chart_df.empty or chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(
+                            datetime.timezone.utc) - sell_timedelta[symbol] / 2:
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
 
-                    bbands_ok, latest_lower_bband_price, latest_upper_bband_price = binance.check_sell_signal(
+                    bbands_ok, latest_lower_bband_price, latest_upper_bband_price = binance.check_buy_signal(
                         chart_df, symbol)
 
+                    chart_df["rolling_mean"] = chart_df['Close'].rolling(window=20).mean()
+                    chart_df["rolling_std"] = chart_df['Close'].rolling(window=20).std()
+                    chart_df["upper_band"] = chart_df["rolling_mean"] + (2 * chart_df["rolling_std"])
+                    chart_df["lower_band"] = chart_df["rolling_mean"] - (2 * chart_df["rolling_std"])
+                    chart_df["ema_short_period"] = chart_df['Close'].ewm(span=ema_short_period).mean()
+                    chart_df["ema_long_period"] = chart_df['Close'].ewm(span=ema_long_period).mean()
+                    chart_df["ema_regime"] =  chart_df['Close'].ewm(span=regime_filter).mean()
 
-                    # Here I will add all the necessary EXIT conditions from the strategy backtest: Bollinger Bands, EMA, etc.
-                    if exit_conditions_met:  # Sell condition met
+                    # For SELL -> ema_short < ema_long - the opposite of BUY
+                    chart_df["ema_trend_filter"] = chart_df["ema_short_period"] < chart_df["ema_long_period"]
+                    # For SELL -> close < ema_regime - the opposite of BUY
+                    chart_df["ema_regime_filter"] = chart_df["Close"] < chart_df["ema_regime"]
 
-                        if bbands_ok:
+                    chart_df["bbands_width_filter"] = np.where(chart_df["upper_band"]/chart_df["lower_band"] > 1.03, True, False)
 
-                            close_p = chart["c"][-1]
+                    close_p = chart["c"][-1]
+                    quantity = order_size[symbol] / close_p
+
+                    # Calculate the short-term (12-period) exponential moving average (EMA)
+                    short_ema = chart_df['Close'].ewm(span=12, adjust=False).mean()
+
+                    # Calculate the long-term (26-period) exponential moving average (EMA)
+                    long_ema = chart_df['Close'].ewm(span=26, adjust=False).mean()
+
+                    # Calculate the MACD line
+                    macd_line = short_ema - long_ema
+
+                    # Calculate the signal line (9-period EMA of the MACD line)
+                    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+
+                    # Calculate the MACD histogram
+                    macd_histogram = macd_line - signal_line
+
+                    # Add MACD indicators to the DataFrame
+                    chart_df['MACD Line'] = macd_line
+                    chart_df['Signal Line'] = signal_line
+                    chart_df['MACD Histogram'] = macd_histogram
+
+                    # Add a column indicating whether MACD histogram is above 0 or not
+                    chart_df['MACD Above 0'] = chart_df['MACD Histogram'] > 0
+
+                    # Add a column indicating crossover points of MACD and Signal lines
+                    chart_df['MACD_Crossover'] = np.where((chart_df['MACD Line'] > chart_df['Signal Line']) & (
+                            chart_df['MACD Line'].shift(1) < chart_df['Signal Line'].shift(1)), 1,
+                                                          np.where((chart_df['MACD Line'] < chart_df['Signal Line']) & (
+                                                                  chart_df['MACD Line'].shift(1) > chart_df[
+                                                              'Signal Line'].shift(1)), -1, 0))
+
+                    conditions_met = 0
+
+                    # Same as BUY, just ema_regime and ema_trend filters are changed
+                    conditions_met = (chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1.03
+                                      and chart_df["ema_regime_filter"].iloc[-1]
+                                      and chart_df["ema_trend_filter"].iloc[-1])
+
+                    # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
+
+                    if symbol_pair_order_count[symbol] > 0:
+
+                        position_status = binance.check_order_status(symbol, symbol_pair_order_count[symbol])
+                        order_id = symbol_pair_order_count[symbol]
+
+                        if position_status == 'FILLED':
+
+                            take_profit_response = binance.set_take_profit(symbol,
+                                                                           'SELL',
+                                                                           quantity,
+                                                                           latest_lower_bband_price,
+                                                                           symbol_pair_target_order_count)
+
+                            # Update balance if order filled
                             asset = binance.getBase(symbol)
-                            balance[balance_idx]["quantity"] = min(balance[balance_idx]["quantity"],
-                                                                   binance.getBalanceQuantity(asset))  # Feb15 added
-                            quantity = binance.qtyRoundDown(symbol, balance[balance_idx]["quantity"])
-
-                            std_log("%s sell (qty: %g)" % (symbol, quantity))
-
-                            if sell_order_type[symbol] == "LMT":
-
-                                # Placing a LIMIT SELL Order at the Latest Upper Bollinger Band Price
-                                # & TAKE_PROFIT on the Latest Lower Bollinger Band Price
-                                (result, take_profit_response) = binance.sell_and_set_take_profit(symbol, quantity,
-                                                                                                  latest_upper_bband_price,
-                                                                                                  latest_lower_bband_price)
-                            else:
-
-                                # Placing a MARKET BUY Order at the current price
-                                result = binance.Sell(symbol, quantity, 0)
-
-                            orderId = result["orderId"]
-                            order_filled = binance.OrderWait(symbol, orderId)
-
-                            if order_filled:
-                                # Update balance if order filled
-                                price = binance.GetContractPrice(symbol, orderId)
-                                std_log("%s %g sold" % (symbol, price))
-                                del balance[balance_idx]
-                                update_balance(balance)
+                            quantity = min(quantity,
+                                           binance.getBalanceQuantity(asset))  # To check real amount in balance
+                            price = binance.GetContractPrice(symbol, order_id)
+                            std_log("%s %g sold" % (symbol, price))
+                            balance.append(
+                                {"symbol": symbol, "quantity": quantity, "entry_t": datetime.datetime.now(),
+                                 "orderId": order_id, "sellprice": price})
+                            update_balance(balance)
+                            if len(balance) == buy_limit:
+                                std_log("Balance is full")
 
                         else:
-                            print("Bollinger Band Condition Not Met. No Order/Positions Set. "
+
+                            new_order_response = binance.replace_position_with_new_limit_order(symbol,
+                                                                                               'SELL',
+                                                                                               order_id,
+                                                                                               quantity,
+                                                                                               latest_upper_bband_price)
+
+                        if position_status == 'FILLED' and symbol_pair_target_order_count[symbol] > 0:
+
+                            take_profit_status = binance.check_order_status(symbol,
+                                                                            symbol_pair_target_order_count[symbol])
+
+                            if take_profit_status != 'FILLED':
+                                new_take_profit_order = binance.update_take_profit(symbol,
+                                                                                   'SELL',
+                                                                                   symbol_pair_target_order_count[
+                                                                                       symbol],
+                                                                                   quantity,
+                                                                                   latest_lower_bband_price,
+                                                                                   symbol_pair_target_order_count)
+                            else:
+                                symbol_pair_order_count[symbol] = 0
+                                symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                symbol_pair_target_order_count[symbol] = 0
+                                symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
+
+                    if conditions_met and symbol_pair_order_count[symbol] == 0:
+
+                        if bbands_ok:  # Buy condition met
+
+                            if buy_order_type[symbol] == "LMT":
+                                result = binance.Sell(symbol, quantity, latest_upper_bband_price)
+                            else:
+                                # Else submitting MARKET order at current price
+                                result = binance.Sell(symbol, quantity, 0)
+
+                            binance.update_order_id_for_symbol_pair(result, symbol)
+
+                        else:
+                            print("Bollinger Band Condition Not Met For SELL Position. No Order/Positions Set. "
                                   "Check logs for more information.")
                     else:
-                        std_log("[%s]  Lowest close does not met" % (symbol,))
+                        std_log("[%s]  Additional Conditions not met for SELL order/position."
+                                " Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
 
                 old_remain_sell[symbol] = remain
 
