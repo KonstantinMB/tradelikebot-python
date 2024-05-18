@@ -39,11 +39,17 @@ class OrderStatus(Enum):
     POSITION = 'POSITION'
 
 
-symbol_pair_trade_counter = {}
-symbol_pair_order_count = {}
-symbol_pair_target_order_count = {}
-symbol_pair_order_status = {}
-symbol_pair_target_order_status = {}
+buy_symbol_pair_trade_counter = {}
+buy_symbol_pair_order_count = {}
+buy_symbol_pair_target_order_count = {}
+buy_symbol_pair_order_status = {}
+buy_symbol_pair_target_order_status = {}
+
+sell_symbol_pair_trade_counter = {}
+sell_symbol_pair_order_count = {}
+sell_symbol_pair_target_order_count = {}
+sell_symbol_pair_order_status = {}
+sell_symbol_pair_target_order_status = {}
 
 symbols = []
 
@@ -86,6 +92,25 @@ def update_balance(balance):
     fout.writelines("%s" % balance)
     fout.close()
 
+
+def set_dicts(symbols):
+
+    global buy_symbol_pair_trade_counter, buy_symbol_pair_order_count, buy_symbol_pair_target_order_count, \
+            buy_symbol_pair_order_status, buy_symbol_pair_order_status, buy_symbol_pair_target_order_status, \
+            sell_symbol_pair_trade_counter, sell_symbol_pair_order_count, sell_symbol_pair_target_order_count, \
+            sell_symbol_pair_order_status, sell_symbol_pair_order_status, sell_symbol_pair_target_order_status
+
+    buy_symbol_pair_trade_counter = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_order_count = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_target_order_count = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
+    buy_symbol_pair_target_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
+
+    sell_symbol_pair_trade_counter = {symbol: 0 for symbol in symbols}
+    sell_symbol_pair_order_count = {symbol: 0 for symbol in symbols}
+    sell_symbol_pair_target_order_count = {symbol: 0 for symbol in symbols}
+    sell_symbol_pair_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
+    sell_symbol_pair_target_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
 
 class Binance():
     apikey = ""
@@ -274,8 +299,8 @@ class Binance():
         std_log("Buy %s (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
 
         self.update_order_id_for_symbol_pair(a, symbol)
-        symbol_pair_trade_counter[symbol] += 1
-        symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+        buy_symbol_pair_trade_counter[symbol] += 1
+        buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
         return a
 
     def Sell(self, symbol, quantity, price):
@@ -295,7 +320,7 @@ class Binance():
             sys.exit()
         std_log("Sell %s (quantity:%f, orderID:%d)" % (symbol, quantity, a["orderId"]))
 
-        symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+        buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
         return a
 
     def OrderCancel(self, symbol_pair, order_id):
@@ -429,7 +454,7 @@ class Binance():
             elif side == 'SELL':
                 new_order = self.Sell(symbol, buy_amount, new_price)
 
-            symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+            buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
             return new_order
 
         except Exception as e:
@@ -512,11 +537,11 @@ class Binance():
 
     def update_order_id_for_symbol_pair(self, order_info, symbol_pair):
 
-        global symbol_pair_order_count
+        global buy_symbol_pair_order_count
         if order_info is not None:
-            symbol_pair_order_count[symbol_pair] = order_info['orderId']
+            buy_symbol_pair_order_count[symbol_pair] = order_info['orderId']
 
-        return symbol_pair_order_count[symbol_pair]
+        return buy_symbol_pair_order_count[symbol_pair]
 
     def buy_and_set_take_profit(self, symbol_pair, quantity, buy_price, upper_band):
 
@@ -723,11 +748,7 @@ if __name__ == "__main__":
         old_remain_buy[symbol] = datetime.timedelta(days=365)  # to get candle closing period
         old_remain_sell[symbol] = datetime.timedelta(days=365)  # to get candle closing period
 
-    symbol_pair_trade_counter = {symbol: 0 for symbol in symbols}
-    symbol_pair_order_count = {symbol: 0 for symbol in symbols}
-    symbol_pair_target_order_count = {symbol: 0 for symbol in symbols}
-    symbol_pair_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
-    symbol_pair_target_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
+    set_dicts(symbols)
 
     while True:
         showed_remain = datetime.timedelta(days=365)  # To show remain time to candle closing
@@ -834,10 +855,10 @@ if __name__ == "__main__":
 
                      # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
-                    if symbol_pair_order_count[symbol] > 0:
+                    if buy_symbol_pair_order_count[symbol] > 0:
 
-                        position_status = binance.check_order_status(symbol, symbol_pair_order_count[symbol])
-                        order_id = symbol_pair_order_count[symbol]
+                        position_status = binance.check_order_status(symbol, buy_symbol_pair_order_count[symbol])
+                        order_id = buy_symbol_pair_order_count[symbol]
 
                         if position_status == 'FILLED':
 
@@ -845,7 +866,7 @@ if __name__ == "__main__":
                                                                            'BUY',
                                                                            quantity,
                                                                            latest_upper_bband_price,
-                                                                           symbol_pair_target_order_count)
+                                                                           buy_symbol_pair_target_order_count)
 
                             # Update balance if order filled
                             asset = binance.getBase(symbol)
@@ -868,26 +889,26 @@ if __name__ == "__main__":
                                                                                                quantity,
                                                                                                latest_lower_bband_price)
 
-                        if position_status == 'FILLED' and symbol_pair_target_order_count[symbol] > 0:
+                        if position_status == 'FILLED' and buy_symbol_pair_target_order_count[symbol] > 0:
 
                             take_profit_status = binance.check_order_status(symbol,
-                                                                            symbol_pair_target_order_count[symbol])
+                                                                            buy_symbol_pair_target_order_count[symbol])
 
                             if take_profit_status != 'FILLED':
                                 new_take_profit_order = binance.update_take_profit(symbol,
                                                                                    'BUY',
-                                                                                   symbol_pair_target_order_count[
+                                                                                   buy_symbol_pair_target_order_count[
                                                                                        symbol],
                                                                                    quantity,
                                                                                    latest_upper_bband_price,
-                                                                                   symbol_pair_target_order_count)
+                                                                                   buy_symbol_pair_target_order_count)
                             else:
-                                symbol_pair_order_count[symbol] = 0
-                                symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
-                                symbol_pair_target_order_count[symbol] = 0
-                                symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                buy_symbol_pair_order_count[symbol] = 0
+                                buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                buy_symbol_pair_target_order_count[symbol] = 0
+                                buy_symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
 
-                    if conditions_met and symbol_pair_order_count[symbol] == 0:
+                    if conditions_met and buy_symbol_pair_order_count[symbol] == 0:
 
                         if bbands_ok:  # Buy condition met
 
@@ -996,10 +1017,10 @@ if __name__ == "__main__":
 
                     # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
-                    if symbol_pair_order_count[symbol] > 0:
+                    if sell_symbol_pair_order_count[symbol] > 0:
 
-                        position_status = binance.check_order_status(symbol, symbol_pair_order_count[symbol])
-                        order_id = symbol_pair_order_count[symbol]
+                        position_status = binance.check_order_status(symbol, sell_symbol_pair_order_count[symbol])
+                        order_id = sell_symbol_pair_order_count[symbol]
 
                         if position_status == 'FILLED':
 
@@ -1007,7 +1028,7 @@ if __name__ == "__main__":
                                                                            'SELL',
                                                                            quantity,
                                                                            latest_lower_bband_price,
-                                                                           symbol_pair_target_order_count)
+                                                                           sell_symbol_pair_target_order_count)
 
                             # Update balance if order filled
                             asset = binance.getBase(symbol)
@@ -1030,30 +1051,30 @@ if __name__ == "__main__":
                                                                                                quantity,
                                                                                                latest_upper_bband_price)
 
-                        if position_status == 'FILLED' and symbol_pair_target_order_count[symbol] > 0:
+                        if position_status == 'FILLED' and sell_symbol_pair_target_order_count[symbol] > 0:
 
                             take_profit_status = binance.check_order_status(symbol,
-                                                                            symbol_pair_target_order_count[symbol])
+                                                                            sell_symbol_pair_target_order_count[symbol])
 
                             if take_profit_status != 'FILLED':
                                 new_take_profit_order = binance.update_take_profit(symbol,
                                                                                    'SELL',
-                                                                                   symbol_pair_target_order_count[
+                                                                                   sell_symbol_pair_target_order_count[
                                                                                        symbol],
                                                                                    quantity,
                                                                                    latest_lower_bband_price,
-                                                                                   symbol_pair_target_order_count)
+                                                                                   sell_symbol_pair_target_order_count)
                             else:
-                                symbol_pair_order_count[symbol] = 0
-                                symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
-                                symbol_pair_target_order_count[symbol] = 0
-                                symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                sell_symbol_pair_order_count[symbol] = 0
+                                sell_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                sell_symbol_pair_target_order_count[symbol] = 0
+                                sell_symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
 
-                    if conditions_met and symbol_pair_order_count[symbol] == 0:
+                    if conditions_met and sell_symbol_pair_order_count[symbol] == 0:
 
                         if bbands_ok:  # Buy condition met
 
-                            if buy_order_type[symbol] == "LMT":
+                            if sell_order_type[symbol] == "LMT":
                                 result = binance.Sell(symbol, quantity, latest_upper_bband_price)
                             else:
                                 # Else submitting MARKET order at current price
