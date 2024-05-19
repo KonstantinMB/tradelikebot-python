@@ -125,21 +125,8 @@ class Binance():
 
     def __init__(self, apikey="", secretkey="", test=False):
         global CONFIG_PATH
-        if apikey == "":
-            if test:
-                fin = open(CONFIG_PATH + "/key_test.txt", "r")
-            else:
-                fin = open(CONFIG_PATH + "/key.txt", "r")
-            self.apikey = fin.readline().strip()
-            self.secretkey = fin.readline().strip()
-            fin.close()
-            if self.apikey == "":
-                print("Please fill the API Key in %s/key.txt" % CONFIG_PATH)
-                sys.sys.exit()
-        else:
-            self.apikey = apikey
-            self.secretkey = secretkey
-
+        self.apikey=apikey
+        self.secretkey=secretkey
         if test:
             self.baseurl = "https://testnet.binance.vision"
         else:
@@ -298,7 +285,7 @@ class Binance():
             sys.exit()
         std_log("Buy %s (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
 
-        self.update_order_id_for_symbol_pair(a, symbol)
+        self.update_buy_order_id_for_symbol_pair(a, symbol)
         buy_symbol_pair_trade_counter[symbol] += 1
         buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
         return a
@@ -320,7 +307,9 @@ class Binance():
             sys.exit()
         std_log("Sell %s (quantity:%f, orderID:%d)" % (symbol, quantity, a["orderId"]))
 
-        buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+        self.update_sell_order_id_for_symbol_pair(a, symbol)
+        sell_symbol_pair_trade_counter[symbol] += 1
+        sell_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
         return a
 
     def OrderCancel(self, symbol_pair, order_id):
@@ -535,13 +524,21 @@ class Binance():
             std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
             return None
 
-    def update_order_id_for_symbol_pair(self, order_info, symbol_pair):
+    def update_buy_order_id_for_symbol_pair(self, order_info, symbol_pair):
 
         global buy_symbol_pair_order_count
         if order_info is not None:
             buy_symbol_pair_order_count[symbol_pair] = order_info['orderId']
 
         return buy_symbol_pair_order_count[symbol_pair]
+
+    def update_sell_order_id_for_symbol_pair(self, order_info, symbol_pair):
+
+        global sell_symbol_pair_order_count
+        if order_info is not None:
+            sell_symbol_pair_order_count[symbol_pair] = order_info['orderId']
+
+        return sell_symbol_pair_order_count[symbol_pair]
 
     def buy_and_set_take_profit(self, symbol_pair, quantity, buy_price, upper_band):
 
@@ -631,8 +628,6 @@ if __name__ == "__main__":
     # Secrets & Parameters 👇🔐
     CONFIG_PATH = os.getenv('CONFIG_PATH')
     EXCEL_NAME = "/Bot_config.xlsx"
-    APIKEY = os.getenv('API_KEY')
-    SECRETKEY = os.getenv('API_SECRET')
 
     # 0. Get Configuration ====================================#
     strategies = []
@@ -672,8 +667,13 @@ if __name__ == "__main__":
             order_size[symbol] = float(sheet.cell(row=row_n, column=6).value)
             h_period[symbol] = int(sheet.cell(row=row_n, column=7).value)
         elif sheet.cell(row=row_n, column=3).value == "SELL":
-            sell_order_type[symbol] = sheet.cell(row=row_n, column=5).value
+            symbol = sheet.cell(row=row_n, column=1).value
+            if not symbol in symbols:
+                symbols.append(symbol)
+                #currency = sheet.cell(row=row_n, column=2).value
             sell_timeframe[symbol] = sheet.cell(row=row_n, column=4).value
+            sell_order_type[symbol] = sheet.cell(row=row_n, column=5).value
+            order_size[symbol] = float(sheet.cell(row=row_n, column=6).value)
             l_period[symbol] = int(sheet.cell(row=row_n, column=8).value)
         elif sheet.cell(row=row_n, column=1).value == "Open positions limit":
             buy_limit = int(sheet.cell(row=row_n, column=2).value)
@@ -697,8 +697,15 @@ if __name__ == "__main__":
     buy_timedelta = {}
     sell_timedelta = {}
     for symbol in symbols:
-        buy_timedelta[symbol] = tdelta_conv[buy_timeframe[symbol]]  # to get candle closing period
-        sell_timedelta[symbol] = tdelta_conv[sell_timeframe[symbol]]
+        if symbol in buy_timeframe:
+            buy_timedelta[symbol] = tdelta_conv[buy_timeframe[symbol]]  # to get candle closing period
+        else:
+            buy_timedelta[symbol] = None  # or some default value, or skip setting it altogether
+
+        if symbol in sell_timeframe:
+            sell_timedelta[symbol] = tdelta_conv[sell_timeframe[symbol]]
+        else:
+            sell_timedelta[symbol] = None  # or some default value, or skip setting it altogether
     ema_timedelta = tdelta_conv[ema_timeframe]
 
     test_api_key = os.getenv('TEST_API_KEY')
@@ -707,14 +714,16 @@ if __name__ == "__main__":
     api_secret = os.getenv('API_SECRET')
 
     # Legacy Client Initialization
-    binance = Binance(test=demo, apikey=APIKEY, secretkey=SECRETKEY)
+    binance = Binance(test=demo, apikey='', secretkey='')
 
     # Binance Library Client Initialization
     client = Client()
     if demo:
         client = Client(api_key=test_api_key, api_secret=test_api_secret, testnet=demo)
+        binance = Binance(test=demo, apikey=test_api_key, secretkey=test_api_secret)
     else:
         client = Client(api_key=api_key, api_secret=api_secret, testnet=demo)
+        binance = Binance(test=demo, apikey=api_key, secretkey=api_secret)
 
     # Balance recovery
     balance = []
@@ -764,7 +773,7 @@ if __name__ == "__main__":
                     balance_idx = bi
 
             # 3.1. Buy Routine
-            if len(balance) < buy_limit and (not exist_in_balance):  # Check if balance is full
+            if len(balance) < buy_limit and symbol in buy_timeframe :  # Check if balance is full
 
                 remain = binance.boundaryRemaining(buy_timeframe[symbol])  # Remain time to buy candle closing
                 showed_remain = min(remain, showed_remain)
@@ -933,7 +942,7 @@ if __name__ == "__main__":
                                 # Else submitting MARKET order at current price
                                 result = binance.Buy(symbol, quantity, 0)
 
-                            binance.update_order_id_for_symbol_pair(result, symbol)
+                            binance.update_buy_order_id_for_symbol_pair(result, symbol)
 
                         else:
                             print("Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set. "
@@ -946,21 +955,21 @@ if __name__ == "__main__":
                 old_remain_buy[symbol] = remain
 
             # 3.2. Sell Routine
-            elif exist_in_balance:  # Check if balance has any position
+            elif symbol in sell_timeframe:  # Check if balance has any position
 
                 remain = binance.boundaryRemaining(sell_timeframe[symbol])
                 showed_remain = min(remain, showed_remain)  # Remain time to sell candle closing
                 if old_remain_sell[symbol] < remain:  # Get into new candle
 
                     chart, chart_df = binance.getChart(symbol,
-                                                       buy_timeframe[symbol],
+                                                       sell_timeframe[symbol],
                                                        start_t=datetime.datetime.now(datetime.timezone.utc) -
-                                                               buy_timedelta[symbol]
-                                                               * h_period[symbol] * 2)
+                                                               sell_timedelta[symbol]
+                                                               * l_period[symbol] * 2)
 
                     #Do we need to request data a second time? We already requested this in the BUY routine
                     if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
-                            buy_timedelta[symbol] / 2:
+                            sell_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
                         chart["o"] = chart["o"][:-1]
                         chart["h"] = chart["h"][:-1]
@@ -1095,7 +1104,7 @@ if __name__ == "__main__":
                                 # Else submitting MARKET order at current price
                                 result = binance.Sell(symbol, quantity, 0)
 
-                            binance.update_order_id_for_symbol_pair(result, symbol)
+                            binance.update_buy_order_id_for_symbol_pair(result, symbol)
 
                         else:
                             print("Bollinger Band Condition Not Met For SELL Position. No Order/Positions Set. "
