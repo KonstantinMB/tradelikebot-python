@@ -777,6 +777,8 @@ if __name__ == "__main__":
                                                                buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
                     
+                    chart_d, chart_df_d = binance.getChart(symbol, "1d",  start_t=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365))
+                    
                     if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
                             buy_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
@@ -840,7 +842,17 @@ if __name__ == "__main__":
                                                                       chart_df['MACD Line'].shift(1) > chart_df[
                                                                   'Signal Line'].shift(1)), -1, 0))
 
+                    #Multi-timeframe analysis for daily data - Adding conditions to filter for daily uptrends
 
+                    # Add MACD indicators to the DataFrame
+
+                    chart_df_d['HHV_56'] = chart_df_d['High'].rolling(window=56).max()
+                    chart_df_d['MACD Line'] = macd_line
+                    chart_df_d['Signal Line'] = signal_line
+                    chart_df_d['MACD Histogram'] = macd_histogram
+
+                    # Add a column indicating whether MACD histogram is above 0 or not
+                    chart_df_d['MACD Above 0'] = chart_df_d['MACD Histogram'] > 0
                     #last_day_data = chart_df_d.iloc[-1]
 
                     #AND (BBandTop_/BBandBot_) -1 > MinBands   AND  Hist_d_stock > 0 AND C > from_peak * period_high_week  AND   C > MA(C,480) AND EMA(C,SEMAsFilter) > EMA(C,LEMAsFilter) 
@@ -848,10 +860,13 @@ if __name__ == "__main__":
                     conditions_met = 0
 
                     #Here I will add all the necessary conditions from the strategy backtest: Bollinger Bands, EMA, etc.
-                    conditions_met = chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1.03 and \
-                                     chart_df["ema_regime_filter"].iloc[-1] and \
-                                     chart_df["ema_trend_filter"].iloc[-1]
+                    conditions_met = chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1 and \
+                                     chart_df["ema_regime_filter"].iloc[-1] > -1 and \
+                                     chart_df["ema_trend_filter"].iloc[-1] > -1 and \
+                                     chart_df_d['MACD Histogram'].iloc[-1] > -2 and \
+                                     chart_df['Close'].iloc[-1] > chart_df_d["HHV_56"].iloc[-1]* 0.30
                    
+                    conditions_met = 1 # Overwrite For testing purposes
 
                      # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
@@ -925,7 +940,8 @@ if __name__ == "__main__":
                                   "Check logs for more information.")
                     else:
                         std_log("[%s]  Additional Conditions not met for BUY position/order. "
-                                "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
+                                "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()) )  
+                        
 
                 old_remain_buy[symbol] = remain
 
@@ -942,6 +958,7 @@ if __name__ == "__main__":
                                                                buy_timedelta[symbol]
                                                                * h_period[symbol] * 2)
 
+                    #Do we need to request data a second time? We already requested this in the BUY routine
                     if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
                             buy_timedelta[symbol] / 2:
                         chart["t"] = chart["t"][:-1]  # Remove excessive candle
@@ -1010,10 +1027,8 @@ if __name__ == "__main__":
 
                     conditions_met = 0
 
-                    # Same as BUY, just ema_regime and ema_trend filters are changed
-                    conditions_met = (chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1.03
-                                      and chart_df["ema_regime_filter"].iloc[-1]
-                                      and chart_df["ema_trend_filter"].iloc[-1])
+                    # Exit conditions: No exit conditions at the moment, we just expect the bot to place the target at the upper bollinger band
+                    conditions_met = 1
 
                     # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
 
