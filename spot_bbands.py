@@ -974,7 +974,7 @@ if __name__ == "__main__":
                         # Remove the last row if the candle is not fully formed
                         chart_df = chart_df.iloc[:-1]
 
-                    bbands_ok, latest_lower_bband_price, latest_upper_bband_price = binance.check_buy_signal(
+                    bbands_ok, latest_lower_bband_price, latest_upper_bband_price = binance.check_sell_signal(
                         chart_df, symbol)
 
                     chart_df["rolling_mean"] = chart_df['Close'].rolling(window=20).mean()
