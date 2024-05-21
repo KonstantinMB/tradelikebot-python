@@ -4,7 +4,7 @@
 # - CONFIG_PATH and EXCEL_NAME need to be specificed (line 291 - 293)
 # - API key and Secret Key can be specified in code or imported from external file.
 #    - In case of importing, key.txt must exist in CONFIG_PATH, containing API key and Secret key.
-# - In CONFIG_PATH, balance.txt and logYYMMDD.txt will be generated automatically.
+#    - In CONFIG_PATH, balance.txt and logYYMMDD.txt will be generated automatically.
 #    - balance.txt : Contains open position information and used in session recovery.
 #    - logYYMMDD.txt : Contains code execution history and needed in debugging.
 #=======================================================#
@@ -90,12 +90,12 @@ def std_log(s):
     fout.writelines(cur_time() + s + "\n")
     fout.close()
 
-
-def update_balance(balance):
-    global CONFIG_PATH
-    fout = open(CONFIG_PATH + "balance.txt", "w")
-    fout.writelines("%s" % balance)
-    fout.close()
+#
+# def update_balance(balance):
+#     global CONFIG_PATH
+#     fout = open(CONFIG_PATH + "balance.txt", "w")
+#     fout.writelines("%s" % balance)
+#     fout.close()
 
 
 class Binance():
@@ -602,26 +602,26 @@ if __name__ == "__main__":
         binance = Binance(test=demo, apikey=api_key, secretkey=api_secret)
 
     # Balance recovery
-    balance = []
-    if not os.path.isfile(CONFIG_PATH + "balance.txt"):
-        fout = open(CONFIG_PATH + "balance.txt", "w")
-        fout.writelines("[]")
-        fout.close()
-    else:
-        try:
-            fin = open(CONFIG_PATH + "balance.txt", "r")
-            balance = eval(fin.readline())
-            fin.close()
-            for b in balance:
-                if type(b) != dict:
-                    raise TypeError
-            if len(balance) != 0:
-                std_log("[Booting] Balance recovered: %s" % str(balance))
-        except:
-            std_log("[Booting] balance.txt broken, reset balance.")
-            fout = open(CONFIG_PATH + "balance.txt", "w")
-            fout.writelines("[]")
-            fout.close()
+    # balance = []
+    # if not os.path.isfile(CONFIG_PATH + "balance.txt"):
+    #     fout = open(CONFIG_PATH + "balance.txt", "w")
+    #     fout.writelines("[]")
+    #     fout.close()
+    # else:
+    #     try:
+    #         fin = open(CONFIG_PATH + "balance.txt", "r")
+    #         balance = eval(fin.readline())
+    #         fin.close()
+    #         for b in balance:
+    #             if type(b) != dict:
+    #                 raise TypeError
+    #         if len(balance) != 0:
+    #             std_log("[Booting] Balance recovered: %s" % str(balance))
+    #     except:
+    #         std_log("[Booting] balance.txt broken, reset balance.")
+    #         fout = open(CONFIG_PATH + "balance.txt", "w")
+    #         fout.writelines("[]")
+    #         fout.close()
             # {"symbol":symbol,"quantity":0,"entry_t":0,"orderId":""}
 
     std_log("[Booting] Complete")
@@ -640,16 +640,16 @@ if __name__ == "__main__":
 
         for symbol in symbols:
             # 3.0. Check if balance has same position
-            exist_in_balance = False
-            balance_idx = -1
-            for bi in range(len(balance)):
-                b = balance[bi]
-                if b["symbol"] == symbol:
-                    exist_in_balance = True
-                    balance_idx = bi
+            # exist_in_balance = False
+            # balance_idx = -1
+            # for bi in range(len(balance)):
+            #     b = balance[bi]
+            #     if b["symbol"] == symbol:
+            #         exist_in_balance = True
+            #         balance_idx = bi
 
             # 3.1. Buy Routine
-            if len(balance) < buy_limit and symbol in buy_timeframe :  # Check if balance is full
+            if symbol in buy_timeframe:  # and len(balance) < buy_limit
 
                 remain = binance.boundaryRemaining(buy_timeframe[symbol])  # Remain time to buy candle closing
                 showed_remain = min(remain, showed_remain)
@@ -773,12 +773,12 @@ if __name__ == "__main__":
                                            binance.getBalanceQuantity(asset))  # To check real amount in balance
                             price = binance.GetContractPrice(symbol, order_id)
                             std_log("%s %g bought" % (symbol, price))
-                            balance.append(
-                                {"symbol": symbol, "quantity": quantity, "entry_t": datetime.datetime.now(),
-                                 "orderId": order_id, "buyprice": price})
-                            update_balance(balance)
-                            if len(balance) == buy_limit:
-                                std_log("Balance is full")
+                            # balance.append(
+                            #     {"symbol": symbol, "quantity": quantity, "entry_t": datetime.datetime.now(),
+                            #      "orderId": order_id, "buyprice": price})
+                            # update_balance(balance)
+                            # if len(balance) == buy_limit:
+                            #     std_log("Balance is full")
 
 
                             if buy_symbol_pair_target_order_count[symbol] > 0:
@@ -836,13 +836,15 @@ if __name__ == "__main__":
         if showed_remain.days == 0:
             text = text + " Time to next candle .. %02d:%02d:%02d (balance: %d/%d)           " % (r_hour,
                                                                                                   r_minute, r_second,
-                                                                                                  len(balance),
+                                                                                                  -1,
+                                                                                                  # len(balance),
                                                                                                   buy_limit)
         else:
             text = text + " Time to next candle .. %d days %02d:%02d:%02d (balance: %d/%d)   " % (showed_remain.days,
                                                                                                   r_hour, r_minute,
                                                                                                   r_second,
-                                                                                                  len(balance),
+                                                                                                  -1,
+                                                                                                  # len(balance),
                                                                                                   buy_limit)
 
         print("\r" + cur_time() + text, end="\r")
