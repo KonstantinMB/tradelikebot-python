@@ -22,11 +22,11 @@ import pandas as pd
 from enum import Enum
 from pandas import DataFrame, Series
 from binance.client import Client, BaseClient
-import numpy as np  
+import numpy as np
+
 # Feeding auth
 from dotenv import load_dotenv
 import os
-
 load_dotenv()
 
 #Strategy Parameters
@@ -38,32 +38,163 @@ class OrderStatus(Enum):
     OPEN_ORDER = 'OPEN_ORDER',
     POSITION = 'POSITION'
 
+class TakeProfitStatus(Enum):
+    NOT_PLACED = "NOT_PLACED",
+    PLACED = 'PLACED'
 
-buy_symbol_pair_trade_counter = {}
+# BUY Order Parameters
+buy_symbol_pair_order_counter = {}
 buy_symbol_pair_order_id = {}
-buy_symbol_pair_target_order_count = {}
 buy_symbol_pair_order_status = {}
+
+# Take Profit Parameters
+buy_symbol_pair_target_counter = {}
+buy_symbol_pair_target_order_id = {}
+buy_symbol_pair_target_order_count = {}
 buy_symbol_pair_target_order_status = {}
 symbols = []
 
 
+def custom_Nate_conditions(order_size):
+
+    #Multi-timeframe analysis for daily data - Adding conditions to filter for daily uptrends
+
+    chart_d, chart_df_d = binance.getChart(symbol, "1d",  start_t=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365))
+
+    close_p = chart_d["c"][-1]
+    quantity = order_size[symbol] / close_p
+
+    # Calculate the short-term (12-period) exponential moving average (EMA)
+    short_ema = chart_df['Close'].ewm(span=12, adjust=False).mean()
+
+    # Calculate the long-term (26-period) exponential moving average (EMA)
+    long_ema = chart_df['Close'].ewm(span=26, adjust=False).mean()
+
+    # Calculate the MACD line
+    macd_line = short_ema - long_ema
+
+    # Calculate the signal line (9-period EMA of the MACD line)
+    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+
+    # Calculate the MACD histogram
+    macd_histogram = macd_line - signal_line
+    # Add MACD indicators to the DataFrame
+    chart_df_d['HHV_56'] = chart_df_d['High'].rolling(window=56).max()
+    chart_df_d['MACD Line'] = macd_line
+    chart_df_d['Signal Line'] = signal_line
+    chart_df_d['MACD Histogram'] = macd_histogram
+
+    # Add a column indicating whether MACD histogram is above 0 or not
+    chart_df_d['MACD Above 0'] = chart_df_d['MACD Histogram'] > 0
+    #last_day_data = chart_df_d.iloc[-1]
+
+    #AND (BBandTop_/BBandBot_) -1 > MinBands   AND  Hist_d_stock > 0 AND C > from_peak * period_high_week  AND   C > MA(C,480) AND EMA(C,SEMAsFilter) > EMA(C,LEMAsFilter)
+
+    #Here I will add all the necessary conditions from the strategy backtest: Bollinger Bands, EMA, etc.
+    conditions_met = chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1 and \
+                     chart_df["ema_regime_filter"].iloc[-1] > -1 and \
+                     chart_df["ema_trend_filter"].iloc[-1] > -1 and \
+                     chart_df_d['MACD Histogram'].iloc[-1] > -2 and \
+                     chart_df['Close'].iloc[-1] > chart_df_d["HHV_56"].iloc[-1]* 0.30
+
+    return 1 # to overwrite and not use conditions in main logic
+
+def get_chart_data(order_size, symbol, interval, start_t):
+
+    candle_chart, candle_chart_df = binance.getChart(symbol, interval, start_t=start_t)
+
+    if candle_chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
+            buy_timedelta[symbol] / 2:
+        candle_chart["t"] = candle_chart["t"][:-1]  # Remove excessive candle
+        candle_chart["o"] = candle_chart["o"][:-1]
+        candle_chart["h"] = candle_chart["h"][:-1]
+        candle_chart["l"] = candle_chart["l"][:-1]
+        candle_chart["c"] = candle_chart["c"][:-1]
+        candle_chart["v"] = candle_chart["v"][:-1]
+
+    # Ensure DataFrame is not empty and is sorted by index (Open Time)
+    if candle_chart_df.empty or candle_chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(
+            datetime.timezone.utc) - buy_timedelta[symbol] / 2:
+        # Remove the last row if the candle is not fully formed
+        candle_chart_df = candle_chart_df.iloc[:-1]
+
+    candle_chart_df["rolling_mean"] = candle_chart_df['Close'].rolling(window=20).mean()
+    candle_chart_df["rolling_std"] = candle_chart_df['Close'].rolling(window=20).std()
+    candle_chart_df["upper_band"] = candle_chart_df["rolling_mean"] + (2 * candle_chart_df["rolling_std"])
+    candle_chart_df["lower_band"] = candle_chart_df["rolling_mean"] - (2 * candle_chart_df["rolling_std"])
+    candle_chart_df["ema_short_period"] = candle_chart_df['Close'].ewm(span=ema_short_period).mean()
+    candle_chart_df["ema_long_period"] = candle_chart_df['Close'].ewm(span=ema_long_period).mean()
+    candle_chart_df["ema_regime"] =  candle_chart_df['Close'].ewm(span=regime_filter).mean()
+
+    candle_chart_df["ema_trend_filter"] = candle_chart_df["ema_short_period"] > candle_chart_df["ema_long_period"]
+    candle_chart_df["ema_regime_filter"] = candle_chart_df["Close"] > candle_chart_df["ema_regime"]
+    candle_chart_df["bbands_width_filter"] = np.where(candle_chart_df["upper_band"]/candle_chart_df["lower_band"] > 1.03, True, False)
+
+    close_p = candle_chart["c"][-1]
+    quantity = order_size[symbol] / close_p
+
+    # Calculate the short-term (12-period) exponential moving average (EMA)
+    short_ema = candle_chart_df['Close'].ewm(span=12, adjust=False).mean()
+
+    # Calculate the long-term (26-period) exponential moving average (EMA)
+    long_ema = candle_chart_df['Close'].ewm(span=26, adjust=False).mean()
+
+    # Calculate the MACD line
+    macd_line = short_ema - long_ema
+
+    # Calculate the signal line (9-period EMA of the MACD line)
+    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+
+    # Calculate the MACD histogram
+    macd_histogram = macd_line - signal_line
+
+    # Add MACD indicators to the DataFrame
+    candle_chart_df['MACD Line'] = macd_line
+    candle_chart_df['Signal Line'] = signal_line
+    candle_chart_df['MACD Histogram'] = macd_histogram
+
+    # Add a column indicating whether MACD histogram is above 0 or not
+    candle_chart_df['MACD Above 0'] = candle_chart_df['MACD Histogram'] > 0
+
+    # Add a column indicating crossover points of MACD and Signal lines
+    candle_chart_df['MACD_Crossover'] = np.where((candle_chart_df['MACD Line'] > candle_chart_df['Signal Line']) & (
+            candle_chart_df['MACD Line'].shift(1) < candle_chart_df['Signal Line'].shift(1)), 1,
+                                          np.where((candle_chart_df['MACD Line'] < candle_chart_df['Signal Line']) & (
+                                                  candle_chart_df['MACD Line'].shift(1) > candle_chart_df[
+                                              'Signal Line'].shift(1)), -1, 0))
+
+    return candle_chart, candle_chart_df, quantity
+
+def reset_dict_for_symbol(symbol):
+
+    buy_symbol_pair_order_counter[symbol] = 0
+    buy_symbol_pair_order_id[symbol] = 0
+    buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+
+    buy_symbol_pair_target_counter[symbol] = 0
+    buy_symbol_pair_target_order_id[symbol] = 0
+    buy_symbol_pair_target_order_count[symbol] = 0
+    buy_symbol_pair_target_order_status[symbol] = TakeProfitStatus.NOT_PLACED
+
 def set_dicts(symbols):
 
-    global buy_symbol_pair_trade_counter, buy_symbol_pair_order_id, buy_symbol_pair_target_order_count, \
-        buy_symbol_pair_order_status, buy_symbol_pair_order_status, buy_symbol_pair_target_order_status
+    global buy_symbol_pair_order_counter, buy_symbol_pair_order_id, buy_symbol_pair_target_order_count, \
+        buy_symbol_pair_target_counter, buy_symbol_pair_target_order_id, buy_symbol_pair_order_status, \
+        buy_symbol_pair_order_status, buy_symbol_pair_target_order_status
 
-    buy_symbol_pair_trade_counter = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_order_counter = {symbol: 0 for symbol in symbols}
     buy_symbol_pair_order_id = {symbol: 0 for symbol in symbols}
-    buy_symbol_pair_target_order_count = {symbol: 0 for symbol in symbols}
     buy_symbol_pair_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
-    buy_symbol_pair_target_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
 
+    buy_symbol_pair_target_counter = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_target_order_id = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_target_order_count = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_target_order_status = {symbol: TakeProfitStatus.NOT_PLACED for symbol in symbols}
 
 def cur_time():
     s = "[" + time.strftime("%d%b%Y", time.localtime()) + "]"
     s = s + "[" + time.strftime("%H:%M:%S", time.localtime()) + "]"
     return s.upper()
-
 
 def today(length=6):
     if length == 8:
@@ -73,15 +204,6 @@ def today(length=6):
     elif length == 4:
         return time.strftime("%m%d", time.localtime())
 
-
-def EMA(closes, period):
-    mult = 2 / (period + 1)
-    ema = [sum(closes[0:period]) / period] * period
-    for c in closes[period:]:
-        ema.append((c - ema[-1]) * mult + ema[-1])
-    return ema
-
-
 def std_log(s):
     global CONFIG_PATH
     s = str(s)
@@ -90,12 +212,62 @@ def std_log(s):
     fout.writelines(cur_time() + s + "\n")
     fout.close()
 
-#
-# def update_balance(balance):
-#     global CONFIG_PATH
-#     fout = open(CONFIG_PATH + "balance.txt", "w")
-#     fout.writelines("%s" % balance)
-#     fout.close()
+def update_take_profit_order_id_for_symbol_pair(order_info, symbol_pair):
+
+    global buy_symbol_pair_target_order_id
+    if order_info is not None:
+        buy_symbol_pair_target_order_id[symbol_pair] = order_info['orderId']
+
+    return buy_symbol_pair_target_order_id[symbol_pair]
+
+
+def update_buy_order_id_for_symbol_pair(order_info, symbol_pair):
+
+    global buy_symbol_pair_order_id
+    if order_info is not None:
+        buy_symbol_pair_order_id[symbol_pair] = order_info['orderId']
+
+    return buy_symbol_pair_order_id[symbol_pair]
+
+
+def get_latest_bbands(candles_chart_df: pd.DataFrame):
+
+    closes = candles_chart_df['Close'].values
+    dates = pd.to_datetime(candles_chart_df.index)
+    close_prices = pd.Series(closes, index=dates)
+
+    # Calculate Bollinger Bands
+    rolling_mean = close_prices.rolling(window=20).mean()
+    rolling_std = close_prices.rolling(window=20).std()
+    upper_band = rolling_mean + (2 * rolling_std)
+    lower_band = rolling_mean - (2 * rolling_std)
+
+    latest_close_price = closes[-1]
+    latest_upper_band_price = upper_band.iloc[-1]
+    latest_lower_band_price = lower_band.iloc[-1]
+
+    return latest_close_price, latest_lower_band_price, latest_upper_band_price
+
+def check_bband_buy_signal(symbol_pair, latest_close, latest_lower_bband_price):
+
+    # Check if the latest close price is below or equal to the Lower Bollinger Band
+    if latest_close <= latest_lower_bband_price:
+        std_log(f"[{symbol_pair}] Latest Close Price {latest_close} is below or equal to "
+                f"the Lower Latest Bollinger Band {latest_lower_bband_price}")
+        return False
+    else:
+        std_log(f"[{symbol_pair}] Bollinger Bands filter condition met "
+                f"(Latest Lower Bollinger Band: {latest_lower_bband_price} / Latest Close: {latest_close})")
+        return True
+
+
+def validate_order_status(symbol_pair_order_status):
+
+    # Check if all values in the dictionary are 'POSITION'
+    if all(order_status == OrderStatus.POSITION for order_status in symbol_pair_order_status.values()):
+        return False  # All orders are in POSITION, so return False
+
+    return True  # Continue running-
 
 
 class Binance():
@@ -217,8 +389,7 @@ class Binance():
         chart = {"t": [], "o": [], "h": [], "l": [], "c": [], "v": []}
 
         for r in raw:
-            chart["t"].append(datetime.datetime.utcfromtimestamp(r[0] / 1000))
-            #chart["t"].append(datetime.datetime.fromtimestamp(r[0]/1000))
+            chart["t"].append(datetime.datetime.fromtimestamp(r[0] / 1000, datetime.timezone.utc))
             chart["o"].append(float(r[1]))
             chart["h"].append(float(r[2]))
             chart["l"].append(float(r[3]))
@@ -238,12 +409,6 @@ class Binance():
 
     def getExchangeInfo(self):
         raw = self.send_public_request("/api/v3/exchangeInfo")
-        return raw
-
-    def getBook(self, symbol):
-        payload = {"symbol": symbol}
-        raw = self.send_public_request("/api/v3/depth", payload=payload)
-        #print(raw)  # TODO: remove
         return raw
 
     def checkOrder(self, symbol, orderId):
@@ -269,10 +434,10 @@ class Binance():
             std_log(payload)
             std_log("Order error")
             sys.exit()
-        std_log(" Buy %s (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
+        std_log("[%s] Buy (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
 
-        self.update_buy_order_id_for_symbol_pair(a, symbol)
-        buy_symbol_pair_trade_counter[symbol] += 1
+        update_buy_order_id_for_symbol_pair(a, symbol)
+        buy_symbol_pair_order_counter[symbol] += 1
         buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
         return a
 
@@ -287,50 +452,15 @@ class Binance():
             cancel_response = self.send_signed_request("DELETE", "/api/v3/order", cancel_payload)
             if cancel_response and cancel_response.get('status', '') == 'CANCELED':
                 buy_symbol_pair_order_id[symbol_pair] = 0
-                buy_symbol_pair_trade_counter[symbol] -= 1
-                return cancel_response
+                buy_symbol_pair_order_counter[symbol] -= 1
                 std_log(f"[{symbol_pair}] Order {order_id} canceled successfully.")
+                return cancel_response
             else:
                 std_log(f"[{symbol_pair}] Failed to cancel order {order_id}. Response: {cancel_response}")
                 return None
         except Exception as e:
             std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
             return None
-
-    def getBalanceQuantity(self, symbol):
-
-        while True:
-            acc = self.Account()
-            acc = acc["balances"]
-            quantity = -1
-            for asset in acc:
-                if asset["asset"] == symbol:
-                    quantity = float(asset["free"])
-                    break
-            std_log("%s %f in balance" % (symbol, quantity))
-            if quantity != -1: break
-            time.sleep(1)
-        return quantity
-
-    def OrderWait(self, symbol, orderId):
-        #time.sleep(10)
-        order_filled = False
-        try:
-            while True:
-                order = self.checkOrder(symbol, orderId)
-                # {'code': -2013, 'msg': 'Order does not exist.'}
-                if not "status" in order:
-                    print(order)
-                    print("Warning: Server did not accept order yet.")
-                elif order["status"] != "NEW":
-                    order_filled = True
-                    break
-                time.sleep(1)
-        except:
-            std_log("%s" % str(order))
-            std_log("Order %s canceled" % orderId)
-            self.OrderCancel(symbol, orderId)
-        return order_filled
 
     def GetContractPrice(self, symbol, orderId):
         payload = {"symbol": symbol}
@@ -407,67 +537,50 @@ class Binance():
             std_log(f"[{symbol_pair}] Error modifying order. Error Info: {e}")
             return None
 
-    def validate_order_status(self, symbol_pair_order_status):
-
-        # Check if all values in the dictionary are 'POSITION'
-        if all(order_status == OrderStatus.POSITION for order_status in symbol_pair_order_status.values()):
-            return False  # All orders are in POSITION, so return False
-
-        return True  # Continue running-
-
     def set_take_profit(self, symbol_pair, buy_amount, take_profit_price):
+
+        take_profit_quantity = self.qtyRound(symbol, buy_amount)
+        take_profit_price = self.priceRound(symbol, take_profit_price)
 
         payload = {
             "symbol": symbol,
             "side": "SELL",
             "type": "LIMIT",
             "timeInForce": "GTC",
-            "quantity": self.qtyRound(symbol, buy_amount),
-            "price": self.priceRound(symbol, take_profit_price)
+            "quantity": take_profit_quantity,
+            "price": take_profit_price
         }
 
         try:
             response = self.send_signed_request("POST", "/api/v3/order", payload)
-            buy_symbol_pair_target_order_count[symbol_pair] += 1
-            return response
+            if response and 'orderId' in response:
+                update_take_profit_order_id_for_symbol_pair(response, symbol)
+                buy_symbol_pair_target_order_status[symbol] = TakeProfitStatus.PLACED
+                std_log("[%s] Take Profit Set (quantity:%f, price:%f, orderID:%d)" % (symbol, take_profit_quantity, take_profit_price, response["orderId"]))
+                return response
+            else:
+                std_log(f"[{symbol_pair}] Failed to place new take profit order. Response: {response}")
+                return None
         except Exception as e:
             std_log(f"[{symbol_pair}] Error placing take_profit for order. Error Info: {e}")
             return None
 
-    def update_take_profit(self, symbol_pair, order_id, new_buy_amount, new_take_profit_price,
-                           symbol_pair_target_order_count):
+    def update_take_profit(self, symbol_pair, order_id, new_buy_amount, new_take_profit_price):
 
         # Step 1: Cancel the existing order
         self.OrderCancel(symbol_pair, order_id)
 
-        # Step 2: Place a new take profit order with the new target price
-        new_payload = {
-            "symbol": symbol_pair,
-            "side": 'SELL',
-            "type": "LIMIT",
-            "timeInForce": "GTC",
-            "quantity": self.qtyRound(symbol_pair, new_buy_amount),
-            "price": self.priceRound(symbol_pair, new_take_profit_price)
-        }
+        self.set_take_profit(symbol,
+                             self.qtyRound(symbol_pair, new_buy_amount),
+                             self.priceRound(symbol_pair, new_take_profit_price))
+        std_log(f"[{symbol_pair}] New Take Profit has been set to {new_take_profit_price}")
 
-        try:
-            new_response = self.send_signed_request("POST", "/api/v3/order", new_payload)
-            if new_response and 'orderId' in new_response:
-                symbol_pair_target_order_count[symbol_pair] += 1
-                std_log(f"[{symbol_pair}] New take profit order placed. Order ID: {new_response['orderId']}")
-                return new_response
-            else:
-                std_log(f"[{symbol_pair}] Failed to place new take profit order. Response: {new_response}")
-                return None
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error placing new take profit order. Error Info: {e}")
-            return None
 
     def check_order_status(self, symbol_pair, order_id):
 
         try:
             # Using the client to fetch order status
-            response = client.get_order(symbol=symbol_pair, orderId=order_id)
+            response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
 
             if response:
                 order_status = response
@@ -481,39 +594,23 @@ class Binance():
             std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
             return None
 
-    def update_buy_order_id_for_symbol_pair(self, order_info, symbol_pair):
+    def check_take_profit_order_status(self, symbol_pair, order_id):
 
-        global buy_symbol_pair_order_id
-        if order_info is not None:
-            buy_symbol_pair_order_id[symbol_pair] = order_info['orderId']
+        try:
+            # Using the client to fetch order status
+            response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
 
-        return buy_symbol_pair_order_id[symbol_pair]
+            if response:
+                order_status = response
+                std_log(f"[{symbol_pair}] Take Profit Order ID [{order_id}] with status: [{order_status['status']}]")
+                return order_status['status']
+            else:
+                std_log(f"[{symbol_pair}] No response received for order status request.")
+                return None
 
-    def check_buy_signal(self, candles_chart_df: pd.DataFrame, symbol_pair):
-
-        closes = candles_chart_df['Close'].values
-        dates = pd.to_datetime(candles_chart_df.index)
-        close_prices = pd.Series(closes, index=dates)
-
-        # Calculate Bollinger Bands
-        rolling_mean = close_prices.rolling(window=20).mean()
-        rolling_std = close_prices.rolling(window=20).std()
-        upper_band = rolling_mean + (2 * rolling_std)
-        lower_band = rolling_mean - (2 * rolling_std)
-
-        latest_close = closes[-1]
-        latest_upper_band = upper_band.iloc[-1]
-        latest_lower_band = lower_band.iloc[-1]
-
-        # Check if the latest close price is below or equal to the Lower Bollinger Band
-        if latest_close <= latest_lower_band:
-            std_log(f"[{symbol_pair}] Latest Close Price {latest_close} is below or equal to "
-                    f"the Lower Latest Bollinger Band {latest_lower_band}")
-            return False, latest_lower_band, latest_upper_band
-        else:
-            std_log(f"[{symbol_pair}]  Bollinger Bands filter condition met "
-                    f"(Latest Lower Bollinger Band: {latest_lower_band} / Latest Close: {latest_close})")
-            return True, latest_lower_band, latest_upper_band
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
+            return None
 
 
 if __name__ == "__main__":
@@ -601,32 +698,8 @@ if __name__ == "__main__":
         client = Client(api_key=api_key, api_secret=api_secret, testnet=demo)
         binance = Binance(test=demo, apikey=api_key, secretkey=api_secret)
 
-    # Balance recovery
-    # balance = []
-    # if not os.path.isfile(CONFIG_PATH + "balance.txt"):
-    #     fout = open(CONFIG_PATH + "balance.txt", "w")
-    #     fout.writelines("[]")
-    #     fout.close()
-    # else:
-    #     try:
-    #         fin = open(CONFIG_PATH + "balance.txt", "r")
-    #         balance = eval(fin.readline())
-    #         fin.close()
-    #         for b in balance:
-    #             if type(b) != dict:
-    #                 raise TypeError
-    #         if len(balance) != 0:
-    #             std_log("[Booting] Balance recovered: %s" % str(balance))
-    #     except:
-    #         std_log("[Booting] balance.txt broken, reset balance.")
-    #         fout = open(CONFIG_PATH + "balance.txt", "w")
-    #         fout.writelines("[]")
-    #         fout.close()
-            # {"symbol":symbol,"quantity":0,"entry_t":0,"orderId":""}
-
     std_log("[Booting] Complete")
 
-    # 3. Trading routine
     old_remain_buy = {}
     old_remain_sell = {}
     for symbol in symbols:
@@ -636,17 +709,10 @@ if __name__ == "__main__":
     set_dicts(symbols)
 
     while True:
+
         showed_remain = datetime.timedelta(days=365)  # To show remain time to candle closing
 
         for symbol in symbols:
-            # 3.0. Check if balance has same position
-            # exist_in_balance = False
-            # balance_idx = -1
-            # for bi in range(len(balance)):
-            #     b = balance[bi]
-            #     if b["symbol"] == symbol:
-            #         exist_in_balance = True
-            #         balance_idx = bi
 
             # 3.1. Buy Routine
             if symbol in buy_timeframe:  # and len(balance) < buy_limit
@@ -656,105 +722,18 @@ if __name__ == "__main__":
 
                 if old_remain_buy[symbol] < remain:  # Get into new candle
 
-                    chart, chart_df = binance.getChart(symbol,
-                                                       buy_timeframe[symbol],
-                                                       start_t=datetime.datetime.now(datetime.timezone.utc) -
-                                                               buy_timedelta[symbol]
-                                                               * h_period[symbol] * 2)
-                    
-                    chart_d, chart_df_d = binance.getChart(symbol, "1d",  start_t=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365))
-                    
-                    if chart["t"][-1].astimezone(datetime.timezone.utc) > datetime.datetime.now(datetime.timezone.utc) - \
-                            buy_timedelta[symbol] / 2:
-                        chart["t"] = chart["t"][:-1]  # Remove excessive candle
-                        chart["o"] = chart["o"][:-1]
-                        chart["h"] = chart["h"][:-1]
-                        chart["l"] = chart["l"][:-1]
-                        chart["c"] = chart["c"][:-1]
-                        chart["v"] = chart["v"][:-1]
+                    (chart, chart_df, quantity) = get_chart_data(order_size,
+                                                                 symbol,
+                                                                 buy_timeframe[symbol],
+                                                                 start_t=datetime.datetime.now(datetime.timezone.utc) -
+                                                                                                      buy_timedelta[symbol]
+                                                                                                      * h_period[symbol] * 2)
 
-                    # Ensure DataFrame is not empty and is sorted by index (Open Time)
-                    if chart_df.empty or chart_df.index[-1].tz_localize('UTC') > datetime.datetime.now(
-                            datetime.timezone.utc) - buy_timedelta[symbol] / 2:
-                        # Remove the last row if the candle is not fully formed
-                        chart_df = chart_df.iloc[:-1]
+                    conditions_met = custom_Nate_conditions(order_size)
 
-                    chart_df["rolling_mean"] = chart_df['Close'].rolling(window=20).mean()
-                    chart_df["rolling_std"] = chart_df['Close'].rolling(window=20).std()
-                    chart_df["upper_band"] = chart_df["rolling_mean"] + (2 * chart_df["rolling_std"])
-                    chart_df["lower_band"] = chart_df["rolling_mean"] - (2 * chart_df["rolling_std"])
-                    chart_df["ema_short_period"] = chart_df['Close'].ewm(span=ema_short_period).mean()
-                    chart_df["ema_long_period"] = chart_df['Close'].ewm(span=ema_long_period).mean()
-                    chart_df["ema_regime"] =  chart_df['Close'].ewm(span=regime_filter).mean()
-
-                    chart_df["ema_trend_filter"] = chart_df["ema_short_period"] > chart_df["ema_long_period"]
-                    chart_df["ema_regime_filter"] = chart_df["Close"] > chart_df["ema_regime"]
-                    chart_df["bbands_width_filter"] = np.where(chart_df["upper_band"]/chart_df["lower_band"] > 1.03, True, False)
-
-                    close_p = chart["c"][-1]
-                    quantity = order_size[symbol] / close_p
-
-                    # Calculate the short-term (12-period) exponential moving average (EMA)
-                    short_ema = chart_df['Close'].ewm(span=12, adjust=False).mean()
-
-                    # Calculate the long-term (26-period) exponential moving average (EMA)
-                    long_ema = chart_df['Close'].ewm(span=26, adjust=False).mean()
-
-                    # Calculate the MACD line
-                    macd_line = short_ema - long_ema
-
-                    # Calculate the signal line (9-period EMA of the MACD line)
-                    signal_line = macd_line.ewm(span=9, adjust=False).mean()
-
-                    # Calculate the MACD histogram
-                    macd_histogram = macd_line - signal_line
-
-                    # Add MACD indicators to the DataFrame
-                    chart_df['MACD Line'] = macd_line
-                    chart_df['Signal Line'] = signal_line
-                    chart_df['MACD Histogram'] = macd_histogram
-
-                    # Add a column indicating whether MACD histogram is above 0 or not
-                    chart_df['MACD Above 0'] = chart_df['MACD Histogram'] > 0
-
-                    # Add a column indicating crossover points of MACD and Signal lines
-                    chart_df['MACD_Crossover'] = np.where((chart_df['MACD Line'] > chart_df['Signal Line']) & (
-                                chart_df['MACD Line'].shift(1) < chart_df['Signal Line'].shift(1)), 1,
-                                                          np.where((chart_df['MACD Line'] < chart_df['Signal Line']) & (
-                                                                      chart_df['MACD Line'].shift(1) > chart_df[
-                                                                  'Signal Line'].shift(1)), -1, 0))
-
-                    #Multi-timeframe analysis for daily data - Adding conditions to filter for daily uptrends
-
-                    # Add MACD indicators to the DataFrame
-
-                    chart_df_d['HHV_56'] = chart_df_d['High'].rolling(window=56).max()
-                    chart_df_d['MACD Line'] = macd_line
-                    chart_df_d['Signal Line'] = signal_line
-                    chart_df_d['MACD Histogram'] = macd_histogram
-
-                    # Add a column indicating whether MACD histogram is above 0 or not
-                    chart_df_d['MACD Above 0'] = chart_df_d['MACD Histogram'] > 0
-                    #last_day_data = chart_df_d.iloc[-1]
-
-                    #AND (BBandTop_/BBandBot_) -1 > MinBands   AND  Hist_d_stock > 0 AND C > from_peak * period_high_week  AND   C > MA(C,480) AND EMA(C,SEMAsFilter) > EMA(C,LEMAsFilter) 
-
-                    (bbands_ok,
+                    (latest_close_price,
                      latest_lower_bband_price,
-                     latest_upper_bband_price) = binance.check_buy_signal(chart_df, symbol)
-
-                    conditions_met = 0
-
-                    #Here I will add all the necessary conditions from the strategy backtest: Bollinger Bands, EMA, etc.
-                    conditions_met = chart_df["upper_band"].iloc[-1]/chart_df["lower_band"].iloc[-1] > 1 and \
-                                     chart_df["ema_regime_filter"].iloc[-1] > -1 and \
-                                     chart_df["ema_trend_filter"].iloc[-1] > -1 and \
-                                     chart_df_d['MACD Histogram'].iloc[-1] > -2 and \
-                                     chart_df['Close'].iloc[-1] > chart_df_d["HHV_56"].iloc[-1]* 0.30
-                   
-                    conditions_met = 1 # Overwrite For testing purposes
-
-                     # chart["c"][-1] >= max(chart["c"][-h_period[symbol] - 1:-1])
+                     latest_upper_bband_price) = get_latest_bbands(chart_df)
 
                     if buy_symbol_pair_order_id[symbol] > 0:
 
@@ -763,41 +742,24 @@ if __name__ == "__main__":
 
                         if position_status == 'FILLED':
 
-                            take_profit_response = binance.set_take_profit(symbol,
-                                                                           quantity,
-                                                                           latest_upper_bband_price)
+                            if buy_symbol_pair_target_order_status[symbol] == TakeProfitStatus.NOT_PLACED:
+                                take_profit_response = binance.set_take_profit(symbol,
+                                                                               quantity,
+                                                                               latest_upper_bband_price)
 
-                            # Update balance if order filled
-                            asset = binance.getBase(symbol)
-                            quantity = min(quantity,
-                                           binance.getBalanceQuantity(asset))  # To check real amount in balance
-                            price = binance.GetContractPrice(symbol, order_id)
-                            std_log("%s %g bought" % (symbol, price))
-                            # balance.append(
-                            #     {"symbol": symbol, "quantity": quantity, "entry_t": datetime.datetime.now(),
-                            #      "orderId": order_id, "buyprice": price})
-                            # update_balance(balance)
-                            # if len(balance) == buy_limit:
-                            #     std_log("Balance is full")
+                            if buy_symbol_pair_target_order_status[symbol] == TakeProfitStatus.PLACED:
 
-
-                            if buy_symbol_pair_target_order_count[symbol] > 0:
-
-                                take_profit_status = binance.check_order_status(symbol,
-                                                                                buy_symbol_pair_target_order_count[symbol])
+                                take_profit_order_id = buy_symbol_pair_target_order_id[symbol]
+                                take_profit_status = binance.check_take_profit_order_status(symbol, take_profit_order_id)
 
                                 if take_profit_status != 'FILLED':
-                                    new_take_profit_order = binance.update_take_profit(symbol,
-                                                                                       buy_symbol_pair_target_order_count[symbol],
-                                                                                       quantity,
-                                                                                       latest_upper_bband_price,
-                                                                                       buy_symbol_pair_target_order_count)
+
+                                    binance.update_take_profit(symbol,
+                                                               take_profit_order_id,
+                                                               quantity,
+                                                               latest_upper_bband_price)
                                 else:
-                                    buy_symbol_pair_trade_counter[symbol] = 0
-                                    buy_symbol_pair_order_id[symbol] = 0
-                                    buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
-                                    buy_symbol_pair_target_order_count[symbol] = 0
-                                    buy_symbol_pair_target_order_status[symbol] = OrderStatus.OPEN_ORDER
+                                    reset_dict_for_symbol(symbol)
                         else:
 
                             new_order_response = binance.replace_position_with_new_limit_order(symbol,
@@ -805,25 +767,26 @@ if __name__ == "__main__":
                                                                                                quantity,
                                                                                                latest_lower_bband_price)
 
-                    if conditions_met and buy_symbol_pair_order_id[symbol] == 0:
+                    if conditions_met:
 
-                        if bbands_ok:  # Buy condition met
+                        if buy_symbol_pair_order_id[symbol] == 0:
 
-                            if buy_order_type[symbol] == "LMT":
-                                result = binance.Buy(symbol, quantity, latest_lower_bband_price)
+                            bband_signal_triggered = check_bband_buy_signal(symbol,
+                                                                            latest_close_price,
+                                                                            latest_lower_bband_price)
+
+                            if bband_signal_triggered:
+
+                                if buy_order_type[symbol] == "LMT":
+                                    result = binance.Buy(symbol, quantity, latest_lower_bband_price)
+                                else:
+                                    # Else submitting MARKET order at current price
+                                    result = binance.Buy(symbol, quantity, 0)
+
                             else:
-                                # Else submitting MARKET order at current price
-                                result = binance.Buy(symbol, quantity, 0)
+                                std_log("[%s] Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set. "
+                                        "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
 
-                            binance.update_buy_order_id_for_symbol_pair(result, symbol)
-
-                        else:
-                            print("Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set. "
-                                  "Check logs for more information.")
-                    else:
-                        std_log("[%s]  Additional Conditions not met for BUY position/order. "
-                                "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()) )  
-                        
 
                 old_remain_buy[symbol] = remain
 
@@ -837,14 +800,12 @@ if __name__ == "__main__":
             text = text + " Time to next candle .. %02d:%02d:%02d (balance: %d/%d)           " % (r_hour,
                                                                                                   r_minute, r_second,
                                                                                                   -1,
-                                                                                                  # len(balance),
                                                                                                   buy_limit)
         else:
             text = text + " Time to next candle .. %d days %02d:%02d:%02d (balance: %d/%d)   " % (showed_remain.days,
                                                                                                   r_hour, r_minute,
                                                                                                   r_second,
                                                                                                   -1,
-                                                                                                  # len(balance),
                                                                                                   buy_limit)
 
         print("\r" + cur_time() + text, end="\r")
