@@ -1,15 +1,3 @@
-#======================== NOTES ========================#
-# - This project was written in python3
-# - Required package: openpyxl (conda may include openpyxl as default)
-# - CONFIG_PATH and EXCEL_NAME need to be specificed (line 291 - 293)
-# - API key and Secret Key can be specified in code or imported from external file.
-#    - In case of importing, key.txt must exist in CONFIG_PATH, containing API key and Secret key.
-#    - In CONFIG_PATH, balance.txt and logYYMMDD.txt will be generated automatically.
-#    - balance.txt : Contains open position information and used in session recovery.
-#    - logYYMMDD.txt : Contains code execution history and needed in debugging.
-#=======================================================#
-
-
 import sys
 import datetime
 import requests
@@ -20,8 +8,7 @@ import hashlib
 import openpyxl
 import pandas as pd
 from enum import Enum
-from pandas import DataFrame, Series
-from binance.client import Client, BaseClient
+from pandas import Series
 import numpy as np
 
 # Feeding auth
@@ -196,19 +183,11 @@ def cur_time():
     s = s + "[" + time.strftime("%H:%M:%S", time.localtime()) + "]"
     return s.upper()
 
-def today(length=6):
-    if length == 8:
-        return time.strftime("%Y%m%d", time.localtime())
-    elif length == 6:
-        return time.strftime("%y%m%d", time.localtime())
-    elif length == 4:
-        return time.strftime("%m%d", time.localtime())
-
 def std_log(s):
     global CONFIG_PATH
     s = str(s)
     print(cur_time() + s)
-    fout = open(CONFIG_PATH + "log%s.txt" % (today(6)), "a")
+    fout = open(CONFIG_PATH + "log%s.txt" % (time.strftime("%y%m%d", time.localtime())), "a")
     fout.writelines(cur_time() + s + "\n")
     fout.close()
 
@@ -260,17 +239,8 @@ def check_bband_buy_signal(symbol_pair, latest_close, latest_lower_bband_price):
                 f"(Latest Lower Bollinger Band: {latest_lower_bband_price} / Latest Close: {latest_close})")
         return True
 
-
-def validate_order_status(symbol_pair_order_status):
-
-    # Check if all values in the dictionary are 'POSITION'
-    if all(order_status == OrderStatus.POSITION for order_status in symbol_pair_order_status.values()):
-        return False  # All orders are in POSITION, so return False
-
-    return True  # Continue running-
-
-
 class Binance():
+
     apikey = ""
     secretkey = ""
     test = False
@@ -282,6 +252,7 @@ class Binance():
     symbol_quote = {}
 
     def __init__(self, apikey="", secretkey="", test=False):
+
         global CONFIG_PATH
         self.apikey=apikey
         self.secretkey=secretkey
@@ -291,18 +262,22 @@ class Binance():
             self.baseurl = "https://api.binance.com"
 
         raw = self.getExchangeInfo()
+
         for r in raw["symbols"]:
+
             symbol = r["symbol"]
             self.symbol_quote[symbol] = r["quoteAsset"]
             self.symbol_base[symbol] = r["baseAsset"]
-            #print(symbol)
+
             tick_size = 0
             qty_step = 0
+
             for f in r["filters"]:
                 if f["filterType"] == "PRICE_FILTER":
                     tick_size = float(f["tickSize"])
                 elif f["filterType"] == "LOT_SIZE":
                     qty_step = float(f["stepSize"])
+
             self.tick_sizes[symbol] = tick_size
             self.qty_steps[symbol] = qty_step
 
@@ -316,14 +291,12 @@ class Binance():
         return round(self.tick_sizes[symbol] * int(price / self.tick_sizes[symbol] + 0.5), 9)
 
     def qtyRound(self, symbol, qty):
-        #print(self.qty_steps[symbol])
         return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol] + 0.5), 9)
 
     def priceRoundDown(self, symbol, price):
         return round(self.tick_sizes[symbol] * int(price / self.tick_sizes[symbol]), 9)
 
     def qtyRoundDown(self, symbol, qty):
-        #print(self.qty_steps[symbol])
         return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol]), 9)
 
     def dispatch_request(self, http_method):
@@ -346,7 +319,9 @@ class Binance():
         return hmac.new(self.secretkey.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
 
     def send_signed_request(self, http_method, url_path, payload={}):
+
         payload["recvWindow"] = self.recv_window
+
         query_string = urlencode(payload, True)
         if query_string:
             query_string = "{}&timestamp={}".format(query_string, self.get_timestamp())
@@ -354,17 +329,20 @@ class Binance():
             query_string = 'timestamp={}'.format(self.get_timestamp())
 
         url = self.baseurl + url_path + '?' + query_string + '&signature=' + self.hashing(query_string)
-        #print("{} {}".format(http_method, url))
+
         params = {'url': url, 'params': {}}
         response = self.dispatch_request(http_method)(**params)
+
         return response.json()
 
     def send_public_request(self, url_path, payload={}):
+
         query_string = urlencode(payload, True)
         url = self.baseurl + url_path
+
         if query_string:
             url = url + '?' + query_string
-        #print("{}".format(url))
+
         response = self.dispatch_request('GET')(url=url)
         return response.json()
 
@@ -412,6 +390,7 @@ class Binance():
         return raw
 
     def checkOrder(self, symbol, orderId):
+
         payload = {"symbol": symbol, "orderId": orderId}
         a = self.send_signed_request("GET", "/api/v3/order", payload=payload)
         # "status": "FILLED" / "NEW" / "CANCELED" / "EXPIRED"
@@ -437,7 +416,6 @@ class Binance():
         std_log("[%s] Buy (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
 
         update_buy_order_id_for_symbol_pair(a, symbol)
-        buy_symbol_pair_order_counter[symbol] += 1
         buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
         return a
 
@@ -458,6 +436,56 @@ class Binance():
             else:
                 std_log(f"[{symbol_pair}] Failed to cancel order {order_id}. Response: {cancel_response}")
                 return None
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
+            return None
+
+    def ReplaceOrder(self, order_id, symbol_pair, quantity, price):
+
+        payload = {
+            "symbol": symbol_pair,
+            "side": 'BUY',
+            "type": "LIMIT",
+            "timeInForce": "GTC",
+            "cancelReplaceMode": "STOP_ON_FAILURE",
+            "cancelOrderId": order_id,
+            "quantity": self.qtyRound(symbol, quantity),
+            "price": self.priceRound(symbol, price)
+        }
+
+        try:
+            replaced_order_response = (
+                self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
+
+            std_log("[%s] BUY Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
+                    % (symbol, quantity, price, replaced_order_response["newOrderResponse"]["orderId"]))
+
+            update_buy_order_id_for_symbol_pair(replaced_order_response["newOrderResponse"], symbol)
+            buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+
+            return replaced_order_response["newOrderResponse"]
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
+            return None
+
+    def ReplaceTakeProfitOrder(self, order_id, symbol_pair, buy_amount, new_price):
+
+        # Prepare the payload for the limit sell order
+        payload = {
+            "symbol": symbol_pair,
+            "side": "SELL",
+            "type": "LIMIT",
+            "timeInForce": "GTC",
+            "cancelReplaceMode": "STOP_ON_FAILURE",
+            "cancelOrderId": order_id,
+            "quantity": self.qtyRound(symbol, buy_amount),
+            "price": self.priceRound(symbol, new_price)
+        }
+
+        try:
+            replaced_order_response = (
+                self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
+            return replaced_order_response["newOrderResponse"]
         except Exception as e:
             std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
             return None
@@ -523,63 +551,77 @@ class Binance():
         lower_band = rolling_mean - (rolling_std * num_std)
         return upper_band, lower_band
 
-    def replace_position_with_new_limit_order(self, symbol_pair, order_id, buy_amount, new_price):
-
+    def replace_position_with_new_order(self, symbol_pair, order_id, buy_amount, new_price):
         try:
-
-            self.OrderCancel(symbol_pair, order_id)
-
-            new_order = self.Buy(symbol, buy_amount, new_price)
-
-            return new_order
-
+            self.ReplaceOrder(order_id, symbol_pair, buy_amount, new_price)
         except Exception as e:
             std_log(f"[{symbol_pair}] Error modifying order. Error Info: {e}")
             return None
 
-    def set_take_profit(self, symbol_pair, buy_amount, take_profit_price):
+    def set_take_profit(self, symbol_pair, quantity, price):
 
-        take_profit_quantity = self.qtyRound(symbol, buy_amount)
-        take_profit_price = self.priceRound(symbol, take_profit_price)
+        """
+               Place a limit order to sell a cryptocurrency at a specified price.
 
+               Args:
+               symbol (str): The trading pair symbol, e.g., 'BTCUSDT'.
+               buy_amount (float): The amount of the cryptocurrency to sell.
+               price (float): The price at which the order should execute.
+               """
+
+        # Prepare the payload for the limit sell order
         payload = {
-            "symbol": symbol,
+            "symbol": symbol_pair,
             "side": "SELL",
             "type": "LIMIT",
-            "timeInForce": "GTC",
-            "quantity": take_profit_quantity,
-            "price": take_profit_price
+            "timeInForce": "GTC",  # Good till cancelled
+            "quantity": self.qtyRound(symbol, quantity),
+            "price": self.priceRound(symbol, price)
         }
 
         try:
             response = self.send_signed_request("POST", "/api/v3/order", payload)
             if response and 'orderId' in response:
-                update_take_profit_order_id_for_symbol_pair(response, symbol)
+                update_take_profit_order_id_for_symbol_pair(response, symbol_pair)
                 buy_symbol_pair_target_order_status[symbol] = TakeProfitStatus.PLACED
-                std_log("[%s] Take Profit Set (quantity:%f, price:%f, orderID:%d)" % (symbol, take_profit_quantity, take_profit_price, response["orderId"]))
+                std_log(f"[{symbol_pair}] Target Order Placed. Will Sell {quantity} of {symbol_pair} at: {price}!"
+                        f" Order ID: {response['orderId']}")
                 return response
+            else:
+                std_log(f"[{symbol_pair}] Failed to place target order. Response: {response}")
+                return None
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error placing target order. Error Info: {e}")
+            return None
+
+    def update_take_profit(self, symbol_pair, order_id, quantity, new_take_profit_price):
+
+        try:
+
+            response = self.ReplaceTakeProfitOrder(order_id, symbol_pair, quantity, new_take_profit_price)
+
+            if response and 'orderId' in response:
+
+                update_take_profit_order_id_for_symbol_pair(response, symbol_pair)
+                buy_symbol_pair_target_order_status[symbol_pair] = TakeProfitStatus.PLACED
+
+                std_log("[%s] Target Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
+                        % (symbol_pair, quantity, new_take_profit_price, response["orderId"]))
+
+                return response
+
             else:
                 std_log(f"[{symbol_pair}] Failed to place new take profit order. Response: {response}")
                 return None
+
         except Exception as e:
             std_log(f"[{symbol_pair}] Error placing take_profit for order. Error Info: {e}")
             return None
 
-    def update_take_profit(self, symbol_pair, order_id, new_buy_amount, new_take_profit_price):
-
-        # Step 1: Cancel the existing order
-        self.OrderCancel(symbol_pair, order_id)
-
-        self.set_take_profit(symbol,
-                             self.qtyRound(symbol_pair, new_buy_amount),
-                             self.priceRound(symbol_pair, new_take_profit_price))
-        std_log(f"[{symbol_pair}] New Take Profit has been set to {new_take_profit_price}")
-
-
     def check_order_status(self, symbol_pair, order_id):
 
         try:
-            # Using the client to fetch order status
+
             response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
 
             if response:
@@ -594,22 +636,22 @@ class Binance():
             std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
             return None
 
-    def check_take_profit_order_status(self, symbol_pair, order_id):
+    def check_target_order_status(self, symbol_pair, order_id):
 
         try:
-            # Using the client to fetch order status
+
             response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
 
             if response:
                 order_status = response
-                std_log(f"[{symbol_pair}] Take Profit Order ID [{order_id}] with status: [{order_status['status']}]")
+                std_log(f"[{symbol_pair}] Target Order ID [{order_id}] with status: [{order_status['status']}]")
                 return order_status['status']
             else:
-                std_log(f"[{symbol_pair}] No response received for order status request.")
+                std_log(f"[{symbol_pair}] No response received for target order status request.")
                 return None
 
         except Exception as e:
-            std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
+            std_log(f"[{symbol_pair}] Error checking target order status. Error Info: {str(e)}")
             return None
 
 
@@ -619,7 +661,6 @@ if __name__ == "__main__":
     CONFIG_PATH = os.getenv('CONFIG_PATH')
     EXCEL_NAME = "/Bot_config.xlsx"
 
-    # 0. Get Configuration ====================================#
     strategies = []
     buy_timeframe = "1m"
     tdelta_conv = {"1m": datetime.timedelta(minutes=1), "3m": datetime.timedelta(minutes=3),
@@ -649,7 +690,6 @@ if __name__ == "__main__":
             symbol = sheet.cell(row=row_n, column=1).value
             if not symbol in symbols:
                 symbols.append(symbol)
-            #currency = sheet.cell(row=row_n, column=2).value
             buy_timeframe[symbol] = sheet.cell(row=row_n, column=4).value
             buy_order_type[symbol] = sheet.cell(row=row_n, column=5).value
             order_size[symbol] = float(sheet.cell(row=row_n, column=6).value)
@@ -658,17 +698,11 @@ if __name__ == "__main__":
             buy_limit = int(sheet.cell(row=row_n, column=2).value)
         elif sheet.cell(row=row_n, column=1).value == "Demo trading":
             demo = sheet.cell(row=row_n, column=2).value
-        elif sheet.cell(row=row_n, column=1).value == "EMA_filter":
-            ema_period = int(sheet.cell(row=row_n, column=2).value)
-        elif sheet.cell(row=row_n, column=1).value == "EMA_timeframe":
-            ema_timeframe = sheet.cell(row=row_n, column=2).value
 
-    #std_log("[Booting]%s"%str(
     std_log("[Booting] Buy timeframes %s" % str(buy_timeframe))
     std_log("[Booting] Buy order type %s" % str(buy_order_type))
     std_log("[Booting] Order size %s" % str(order_size))
     std_log("[Booting] Highest period %s" % str(h_period))
-    std_log("[Booting] Lowest period %s" % str(l_period))
     std_log("[Booting] Open positions limit %s" % str(buy_limit))
     std_log("[Booting] Demo account: %s" % str(demo))
 
@@ -679,8 +713,6 @@ if __name__ == "__main__":
         else:
             buy_timedelta[symbol] = None  # or some default value, or skip setting it altogether
 
-    ema_timedelta = tdelta_conv[ema_timeframe]
-
     test_api_key = os.getenv('TEST_API_KEY')
     test_api_secret = os.getenv('TEST_API_SECRET')
     api_key = os.getenv('API_KEY')
@@ -689,13 +721,9 @@ if __name__ == "__main__":
     # Legacy Client Initialization
     binance = Binance(test=demo, apikey='', secretkey='')
 
-    # Binance Library Client Initialization
-    client = Client()
     if demo:
-        client = Client(api_key=test_api_key, api_secret=test_api_secret, testnet=demo)
         binance = Binance(test=demo, apikey=test_api_key, secretkey=test_api_secret)
     else:
-        client = Client(api_key=api_key, api_secret=api_secret, testnet=demo)
         binance = Binance(test=demo, apikey=api_key, secretkey=api_secret)
 
     std_log("[Booting] Complete")
@@ -735,22 +763,27 @@ if __name__ == "__main__":
                      latest_lower_bband_price,
                      latest_upper_bband_price) = get_latest_bbands(chart_df)
 
-                    if buy_symbol_pair_order_id[symbol] > 0:
+                    if buy_symbol_pair_order_counter[symbol] > 0:
 
                         position_status = binance.check_order_status(symbol, buy_symbol_pair_order_id[symbol])
                         order_id = buy_symbol_pair_order_id[symbol]
 
                         if position_status == 'FILLED':
 
+                            first_target_order = False
+
                             if buy_symbol_pair_target_order_status[symbol] == TakeProfitStatus.NOT_PLACED:
+
                                 take_profit_response = binance.set_take_profit(symbol,
                                                                                quantity,
                                                                                latest_upper_bband_price)
+                                first_target_order = True
 
-                            if buy_symbol_pair_target_order_status[symbol] == TakeProfitStatus.PLACED:
+                            if (first_target_order is False
+                                    and buy_symbol_pair_target_order_status[symbol] == TakeProfitStatus.PLACED):
 
                                 take_profit_order_id = buy_symbol_pair_target_order_id[symbol]
-                                take_profit_status = binance.check_take_profit_order_status(symbol, take_profit_order_id)
+                                take_profit_status = binance.check_target_order_status(symbol, take_profit_order_id)
 
                                 if take_profit_status != 'FILLED':
 
@@ -762,14 +795,12 @@ if __name__ == "__main__":
                                     reset_dict_for_symbol(symbol)
                         else:
 
-                            new_order_response = binance.replace_position_with_new_limit_order(symbol,
-                                                                                               order_id,
-                                                                                               quantity,
-                                                                                               latest_lower_bband_price)
+                            binance.replace_position_with_new_order(symbol, order_id, quantity,
+                                                                    latest_lower_bband_price)
 
                     if conditions_met:
 
-                        if buy_symbol_pair_order_id[symbol] == 0:
+                        if buy_symbol_pair_order_counter[symbol] == 0:
 
                             bband_signal_triggered = check_bband_buy_signal(symbol,
                                                                             latest_close_price,
@@ -779,14 +810,15 @@ if __name__ == "__main__":
 
                                 if buy_order_type[symbol] == "LMT":
                                     result = binance.Buy(symbol, quantity, latest_lower_bband_price)
+                                    buy_symbol_pair_order_counter[symbol] += 1
                                 else:
                                     # Else submitting MARKET order at current price
                                     result = binance.Buy(symbol, quantity, 0)
+                                    buy_symbol_pair_order_counter[symbol] += 1
 
                             else:
                                 std_log("[%s] Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set. "
                                         "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
-
 
                 old_remain_buy[symbol] = remain
 
