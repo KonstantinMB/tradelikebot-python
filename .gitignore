@@ -2,5 +2,4 @@
 .env
 log*
 balance.txt
-/spot-bot-venv
 websocket-communication.py
