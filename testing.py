@@ -1,4 +1,3 @@
-import time
 import sys
 import datetime
 import requests
@@ -9,8 +8,6 @@ import hashlib
 import openpyxl
 import pandas as pd
 from enum import Enum
-from pandas import DataFrame, Series
-from binance.client import Client, BaseClient
 import numpy as np
 
 # Feeding auth
@@ -18,18 +15,13 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
+symbols = []
+CONFIG_PATH = os.getenv('CONFIG_PATH')
+
 #Strategy Parameters
 ema_short_period = 45
 ema_long_period = 100
 regime_filter = 480
-
-class OrderStatus(Enum):
-    OPEN_ORDER = 'OPEN_ORDER',
-    POSITION = 'POSITION'
-
-class TakeProfitStatus(Enum):
-    NOT_PLACED = "NOT_PLACED",
-    PLACED = 'PLACED'
 
 # BUY Order Parameters
 buy_symbol_pair_order_counter = {}
@@ -41,17 +33,476 @@ buy_symbol_pair_target_counter = {}
 buy_symbol_pair_target_order_id = {}
 buy_symbol_pair_target_order_count = {}
 buy_symbol_pair_target_order_status = {}
-symbols = []
 
+class OrderStatus(Enum):
+    OPEN_ORDER = 'OPEN_ORDER',
+    POSITION = 'POSITION'
+
+class TakeProfitStatus(Enum):
+    NOT_PLACED = "NOT_PLACED",
+    PLACED = 'PLACED'
+
+class Binance():
+
+    apikey = ""
+    secretkey = ""
+    test = False
+    baseurl = ""
+    tick_sizes = {}
+    qty_steps = {}
+    recv_window = 59999
+    symbol_base = {}  # base/quote
+    symbol_quote = {}
+
+    def __init__(self, apikey="", secretkey="", test=False):
+
+        global CONFIG_PATH
+        self.apikey=apikey
+        self.secretkey=secretkey
+        if test:
+            self.baseurl = "https://testnet.binance.vision"
+        else:
+            self.baseurl = "https://api.binance.com"
+
+        raw = self.getExchangeInfo()
+
+        for r in raw["symbols"]:
+
+            symbol = r["symbol"]
+            self.symbol_quote[symbol] = r["quoteAsset"]
+            self.symbol_base[symbol] = r["baseAsset"]
+
+            tick_size = 0
+            qty_step = 0
+
+            for f in r["filters"]:
+                if f["filterType"] == "PRICE_FILTER":
+                    tick_size = float(f["tickSize"])
+                elif f["filterType"] == "LOT_SIZE":
+                    qty_step = float(f["stepSize"])
+
+            self.tick_sizes[symbol] = tick_size
+            self.qty_steps[symbol] = qty_step
+
+    def priceRound(self, symbol, price):
+        return round(self.tick_sizes[symbol] * int(price / self.tick_sizes[symbol] + 0.5), 9)
+
+    def qtyRound(self, symbol, qty):
+        return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol] + 0.5), 9)
+
+    def qtyRoundDown(self, symbol, qty):
+        return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol]), 9)
+
+    def dispatch_request(self, http_method):
+        session = requests.Session()
+        session.headers.update({
+            'Content-Type': 'application/json;charset=utf-8',
+            'X-MBX-APIKEY': self.apikey
+        })
+        return {
+            'GET': session.get,
+            'DELETE': session.delete,
+            'PUT': session.put,
+            'POST': session.post,
+        }.get(http_method, 'GET')
+
+    def get_timestamp(self):
+        return int(time.time() * 1000)
+
+    def hashing(self, query_string):
+        return hmac.new(self.secretkey.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+
+    def send_signed_request(self, http_method, url_path, payload={}):
+
+        payload["recvWindow"] = self.recv_window
+
+        query_string = urlencode(payload, True)
+        if query_string:
+            query_string = "{}&timestamp={}".format(query_string, self.get_timestamp())
+        else:
+            query_string = 'timestamp={}'.format(self.get_timestamp())
+
+        url = self.baseurl + url_path + '?' + query_string + '&signature=' + self.hashing(query_string)
+
+        params = {'url': url, 'params': {}}
+        response = self.dispatch_request(http_method)(**params)
+
+        return response.json()
+
+    def send_public_request(self, url_path, payload={}):
+
+        query_string = urlencode(payload, True)
+        url = self.baseurl + url_path
+
+        if query_string:
+            url = url + '?' + query_string
+
+        response = self.dispatch_request('GET')(url=url)
+        return response.json()
+
+    def Account(self):
+        return self.send_signed_request("GET", "/api/v3/account")
+
+    def getChart(self, symbol, interval, start_t=0, end_t=0):
+
+        if not interval in ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w",
+                            "1M"]:
+            print("getChart: invalid interval")
+            return
+
+        payload = {"symbol": symbol, "interval": interval}
+        if start_t != 0:
+            payload["startTime"] = int(start_t.timestamp() * 1000)
+        if end_t != 0:
+            payload["endTime"] = int(end_t.timestamp() * 1000)
+
+        #payload = {"symbol":symbol,"interval":interval,"startTime":int(sT.timestamp()*1000),"endTime":int(eT.timestamp()*1000)}
+        raw = self.send_public_request("/api/v3/klines", payload=payload)
+        chart = {"t": [], "o": [], "h": [], "l": [], "c": [], "v": []}
+
+        for r in raw:
+            chart["t"].append(datetime.datetime.fromtimestamp(r[0] / 1000, datetime.timezone.utc))
+            chart["o"].append(float(r[1]))
+            chart["h"].append(float(r[2]))
+            chart["l"].append(float(r[3]))
+            chart["c"].append(float(r[4]))
+            chart["v"].append(float(r[5]))
+
+        # Creating DataFrame from raw data
+        columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time',
+                   'Quote Asset Volume', 'Number of Trades', 'Taker Buy Base Asset Volume',
+                   'Taker Buy Quote Asset Volume', 'Ignore']
+        df = pd.DataFrame(raw, columns=columns)
+        df['Time'] = pd.to_datetime(df['Time'], unit='ms')
+        df.set_index('Time', inplace=True)
+        df = df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
+
+        return chart, df
+
+    def getExchangeInfo(self):
+        raw = self.send_public_request("/api/v3/exchangeInfo")
+        return raw
+
+    def checkOrder(self, symbol, orderId):
+
+        payload = {"symbol": symbol, "orderId": orderId}
+        a = self.send_signed_request("GET", "/api/v3/order", payload=payload)
+        # "status": "FILLED" / "NEW" / "CANCELED" / "EXPIRED"
+        return a
+
+    def Buy(self, symbol, quantity, price):
+        payload = {"symbol": symbol, "side": "BUY", "quantity": self.qtyRound(symbol, quantity)}
+        if price == 0:
+            payload["type"] = "MARKET"
+        else:
+            payload["type"] = "LIMIT"
+            payload["timeInForce"] = "GTC"
+            payload["price"] = self.priceRound(symbol, price)
+        #print(payload)
+        a = self.send_signed_request("POST", "/api/v3/order", payload=payload)
+
+        #print(a)
+        if not "orderId" in a:
+            std_log(str(a))
+            std_log(payload)
+            std_log("Order error")
+            sys.exit()
+        std_log("[%s] Buy (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
+
+        update_buy_order_id_for_symbol_pair(a, symbol)
+        buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+        return a
+
+    def ReplaceOrder(self, order_id, symbol_pair, quantity, price):
+
+        payload = {
+            "symbol": symbol_pair,
+            "side": 'BUY',
+            "type": "LIMIT",
+            "timeInForce": "GTC",
+            "cancelReplaceMode": "STOP_ON_FAILURE",
+            "cancelOrderId": order_id,
+            "quantity": self.qtyRound(symbol, quantity),
+            "price": self.priceRound(symbol, price)
+        }
+
+        try:
+            replaced_order_response = (
+                self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
+
+            std_log("[%s] BUY Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
+                    % (symbol, quantity, price, replaced_order_response["newOrderResponse"]["orderId"]))
+
+            update_buy_order_id_for_symbol_pair(replaced_order_response["newOrderResponse"], symbol)
+            buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+
+            return replaced_order_response["newOrderResponse"]
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
+            return None
+
+    def ReplaceTakeProfitOrder(self, order_id, symbol_pair, buy_amount, new_price):
+
+        # Prepare the payload for the limit sell order
+        payload = {
+            "symbol": symbol_pair,
+            "side": "SELL",
+            "type": "LIMIT",
+            "timeInForce": "GTC",
+            "cancelReplaceMode": "STOP_ON_FAILURE",
+            "cancelOrderId": order_id,
+            "quantity": self.qtyRound(symbol, buy_amount),
+            "price": self.priceRound(symbol, new_price)
+        }
+
+        try:
+            replaced_order_response = (
+                self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
+            return replaced_order_response["newOrderResponse"]
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
+            return None
+
+    def GetContractPrice(self, symbol, orderId):
+        payload = {"symbol": symbol}
+        a = self.send_signed_request("GET", "/api/v3/myTrades", payload=payload)
+        price = -1
+        for order in a:
+            if order["orderId"] == int(orderId):
+                price = float(order["price"])
+                break
+        return price
+
+    def boundaryRemaining(self, tf):
+
+        # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"
+        t = datetime.datetime.now(datetime.timezone.utc)
+        if tf == "1m":
+            next_t = (t + datetime.timedelta(minutes=1)).replace(second=0, microsecond=0)
+        elif tf == "3m":
+            next_t = (t + datetime.timedelta(minutes=3 - t.minute % 3)).replace(second=0, microsecond=0)
+        elif tf == "5m":
+            next_t = (t + datetime.timedelta(minutes=5 - t.minute % 5)).replace(second=0, microsecond=0)
+        elif tf == "15m":
+            next_t = (t + datetime.timedelta(minutes=15 - t.minute % 15)).replace(second=0, microsecond=0)
+        elif tf == "30m":
+            next_t = (t + datetime.timedelta(minutes=30 - t.minute % 30)).replace(second=0, microsecond=0)
+        elif tf == "1h":
+            next_t = (t + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        elif tf == "2h":
+            next_t = (t + datetime.timedelta(hours=2 - t.hour % 2)).replace(minute=0, second=0, microsecond=0)
+        elif tf == "4h":
+            next_t = (t + datetime.timedelta(hours=4 - t.hour % 4)).replace(minute=0, second=0, microsecond=0)
+        elif tf == "6h":
+            next_t = (t + datetime.timedelta(hours=6 - t.hour % 6)).replace(minute=0, second=0, microsecond=0)
+        elif tf == "8h":
+            next_t = (t + datetime.timedelta(hours=8 - t.hour % 8)).replace(minute=0, second=0, microsecond=0)
+        elif tf == "12h":
+            next_t = (t + datetime.timedelta(hours=12 - t.hour % 12)).replace(minute=0, second=0, microsecond=0)
+        elif tf == "1d":
+            next_t = (t + datetime.timedelta(hours=24)).replace(hour=0, minute=0, second=0, microsecond=0)
+        elif tf == "3d":
+            day_pivot = datetime.datetime(2017, 8, 17, 0, 0)
+            next_t = (t + datetime.timedelta(days=3 - (t - day_pivot).days % 3)).replace(hour=0, minute=0, second=0,
+                                                                                         microsecond=0)
+        elif tf == "1w":  # Monday 0am
+            next_t = (t + datetime.timedelta(days=7 - t.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        elif tf == "1M":  # 0am
+            if t.month == 12:
+                next_t = datetime.datetime(t.year + 1, 1, 1, 0, 0, 0)
+            else:
+                next_t = datetime.datetime(t.year, t.month + 1, 1, 0, 0, 0)
+        remaining = next_t - t
+        return remaining
+
+    def replace_position_with_new_order(self, symbol_pair, order_id, buy_amount, new_price):
+        try:
+            self.ReplaceOrder(order_id, symbol_pair, buy_amount, new_price)
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error modifying order. Error Info: {e}")
+            return None
+
+    def set_take_profit(self, symbol_pair, quantity, price):
+
+        """
+               Place a limit order to sell a cryptocurrency at a specified price.
+
+               Args:
+               symbol (str): The trading pair symbol, e.g., 'BTCUSDT'.
+               buy_amount (float): The amount of the cryptocurrency to sell.
+               price (float): The price at which the order should execute.
+               """
+
+        # Prepare the payload for the limit sell order
+        payload = {
+            "symbol": symbol_pair,
+            "side": "SELL",
+            "type": "LIMIT",
+            "timeInForce": "GTC",  # Good till cancelled
+            "quantity": self.qtyRound(symbol, quantity),
+            "price": self.priceRound(symbol, price)
+        }
+
+        try:
+            response = self.send_signed_request("POST", "/api/v3/order", payload)
+            if response and 'orderId' in response:
+                update_take_profit_order_id_for_symbol_pair(response, symbol_pair)
+                buy_symbol_pair_target_order_status[symbol] = TakeProfitStatus.PLACED
+                std_log(f"[{symbol_pair}] Target Order Placed. Will Sell {quantity} of {symbol_pair} at: {price}!"
+                        f" Order ID: {response['orderId']}")
+                return response
+            else:
+                std_log(f"[{symbol_pair}] Failed to place target order. Response: {response}")
+                return None
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error placing target order. Error Info: {e}")
+            return None
+
+    def update_take_profit(self, symbol_pair, order_id, quantity, new_take_profit_price):
+
+        try:
+
+            response = self.ReplaceTakeProfitOrder(order_id, symbol_pair, quantity, new_take_profit_price)
+
+            if response and 'orderId' in response:
+
+                update_take_profit_order_id_for_symbol_pair(response, symbol_pair)
+                buy_symbol_pair_target_order_status[symbol_pair] = TakeProfitStatus.PLACED
+
+                std_log("[%s] Target Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
+                        % (symbol_pair, quantity, new_take_profit_price, response["orderId"]))
+
+                return response
+
+            else:
+                std_log(f"[{symbol_pair}] Failed to place new take profit order. Response: {response}")
+                return None
+
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error placing take_profit for order. Error Info: {e}")
+            return None
+
+    def check_order_status(self, symbol_pair, order_id):
+
+        try:
+
+            response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
+
+            if response:
+                order_status = response
+                std_log(f"[{symbol_pair}] Order ID [{order_id}] with status: [{order_status['status']}]")
+                return order_status['status']
+            else:
+                std_log(f"[{symbol_pair}] No response received for order status request.")
+                return None
+
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
+            return None
+
+    def check_target_order_status(self, symbol_pair, order_id):
+
+        try:
+
+            response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
+
+            if response:
+                order_status = response
+                std_log(f"[{symbol_pair}] Target Order ID [{order_id}] with status: [{order_status['status']}]")
+                return order_status['status']
+            else:
+                std_log(f"[{symbol_pair}] No response received for target order status request.")
+                return None
+
+        except Exception as e:
+            std_log(f"[{symbol_pair}] Error checking target order status. Error Info: {str(e)}")
+            return None
+
+def configure_parameters(excel_path):
+
+    buy_timedelta = {}
+    buy_timeframe = {}
+    buy_order_type = {}
+    order_size = {}
+    h_period = {}
+    demo = True
+    buy_limit = 0
+    tdelta_conv = {"1m": datetime.timedelta(minutes=1), "3m": datetime.timedelta(minutes=3),
+                   "5m": datetime.timedelta(minutes=5), "15m": datetime.timedelta(minutes=15),
+                   "30m": datetime.timedelta(minutes=30), "1h": datetime.timedelta(hours=1),
+                   "2h": datetime.timedelta(hours=2), "4h": datetime.timedelta(hours=4),
+                   "6h": datetime.timedelta(hours=6), "8h": datetime.timedelta(hours=8),
+                   "12h": datetime.timedelta(hours=12), "1d": datetime.timedelta(days=1),
+                   "3d": datetime.timedelta(days=3), "1w": datetime.timedelta(days=7)}
+
+    # 0.1. Read excel
+    config = openpyxl.load_workbook(excel_path)
+    sheet = config.worksheets[0]
+
+    for row_n in range(2, 100):
+        if sheet.cell(row=row_n, column=1).value == "END OF CONFIGURATION":
+            break
+        if sheet.cell(row=row_n, column=3).value == "BUY":
+            symbol = sheet.cell(row=row_n, column=1).value
+            if not symbol in symbols:
+                symbols.append(symbol)
+            buy_timeframe[symbol] = sheet.cell(row=row_n, column=4).value
+            buy_order_type[symbol] = sheet.cell(row=row_n, column=5).value
+            order_size[symbol] = float(sheet.cell(row=row_n, column=6).value)
+            h_period[symbol] = int(sheet.cell(row=row_n, column=7).value)
+        elif sheet.cell(row=row_n, column=1).value == "Open positions limit":
+            buy_limit = int(sheet.cell(row=row_n, column=2).value)
+        elif sheet.cell(row=row_n, column=1).value == "Demo trading":
+            demo = sheet.cell(row=row_n, column=2).value
+
+    std_log("[Booting] Buy timeframes %s" % str(buy_timeframe))
+    std_log("[Booting] Buy order type %s" % str(buy_order_type))
+    std_log("[Booting] Order size %s" % str(order_size))
+    std_log("[Booting] Highest period %s" % str(h_period))
+    std_log("[Booting] Open positions limit %s" % str(buy_limit))
+    std_log("[Booting] Demo account: %s" % str(demo))
+
+    for symbol_pair in symbols:
+        if symbol_pair in buy_timeframe:
+            buy_timedelta[symbol_pair] = tdelta_conv[buy_timeframe[symbol_pair]]  # to get candle closing period
+        else:
+            buy_timedelta[symbol_pair] = None  # or some default value, or skip setting it altogether
+
+    return buy_timedelta, buy_timeframe, buy_order_type, order_size, h_period, demo, buy_limit
+
+def configure_binance_client():
+
+    test_api_key = os.getenv('TEST_API_KEY')
+    test_api_secret = os.getenv('TEST_API_SECRET')
+    api_key = os.getenv('API_KEY')
+    api_secret = os.getenv('API_SECRET')
+
+    # Legacy Client Initialization
+    binance = Binance(test=demo, apikey='', secretkey='')
+
+    if demo:
+        binance = Binance(test=demo, apikey=test_api_key, secretkey=test_api_secret)
+    else:
+        binance = Binance(test=demo, apikey=api_key, secretkey=api_secret)
+
+    return binance
+
+def set_old_remain_buy():
+
+    old_remain_buy = {}
+    for symbol in symbols:
+        old_remain_buy[symbol] = datetime.timedelta(days=365)  # to get candle closing period
+
+    return old_remain_buy
 
 def custom_Nate_conditions(order_size):
 
-    #Multi-timeframe analysis for daily data - Adding conditions to filter for daily uptrends
+    # Multi-timeframe analysis for daily data - Adding conditions to filter for daily uptrends
 
     chart_d, chart_df_d = binance.getChart(symbol, "1d",  start_t=datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365))
 
     close_p = chart_d["c"][-1]
-    quantity = order_size[symbol] / close_p
+    quantity_p = order_size[symbol] / close_p
 
     # Calculate the short-term (12-period) exponential moving average (EMA)
     short_ema = chart_df['Close'].ewm(span=12, adjust=False).mean()
@@ -185,19 +636,11 @@ def cur_time():
     s = s + "[" + time.strftime("%H:%M:%S", time.localtime()) + "]"
     return s.upper()
 
-def today(length=6):
-    if length == 8:
-        return time.strftime("%Y%m%d", time.localtime())
-    elif length == 6:
-        return time.strftime("%y%m%d", time.localtime())
-    elif length == 4:
-        return time.strftime("%m%d", time.localtime())
-
 def std_log(s):
     global CONFIG_PATH
     s = str(s)
     print(cur_time() + s)
-    fout = open(CONFIG_PATH + "log%s.txt" % (today(6)), "a")
+    fout = open(CONFIG_PATH + "log%s.txt" % (time.strftime("%y%m%d", time.localtime())), "a")
     fout.writelines(cur_time() + s + "\n")
     fout.close()
 
@@ -209,7 +652,6 @@ def update_take_profit_order_id_for_symbol_pair(order_info, symbol_pair):
 
     return buy_symbol_pair_target_order_id[symbol_pair]
 
-
 def update_buy_order_id_for_symbol_pair(order_info, symbol_pair):
 
     global buy_symbol_pair_order_id
@@ -217,7 +659,6 @@ def update_buy_order_id_for_symbol_pair(order_info, symbol_pair):
         buy_symbol_pair_order_id[symbol_pair] = order_info['orderId']
 
     return buy_symbol_pair_order_id[symbol_pair]
-
 
 def get_latest_bbands(candles_chart_df: pd.DataFrame):
 
@@ -250,559 +691,23 @@ def check_bband_buy_signal(symbol_pair, latest_close, latest_lower_bband_price):
         return True
 
 
-def validate_order_status(symbol_pair_order_status):
-
-    # Check if all values in the dictionary are 'POSITION'
-    if all(order_status == OrderStatus.POSITION for order_status in symbol_pair_order_status.values()):
-        return False  # All orders are in POSITION, so return False
-
-    return True  # Continue running-
-
-
-class Binance():
-    apikey = ""
-    secretkey = ""
-    test = False
-    baseurl = ""
-    tick_sizes = {}
-    qty_steps = {}
-    recv_window = 59999
-    symbol_base = {}  # base/quote
-    symbol_quote = {}
-
-    def __init__(self, apikey="", secretkey="", test=False):
-        global CONFIG_PATH
-        self.apikey=apikey
-        self.secretkey=secretkey
-        if test:
-            self.baseurl = "https://testnet.binance.vision"
-        else:
-            self.baseurl = "https://api.binance.com"
-
-        raw = self.getExchangeInfo()
-        for r in raw["symbols"]:
-            symbol = r["symbol"]
-            self.symbol_quote[symbol] = r["quoteAsset"]
-            self.symbol_base[symbol] = r["baseAsset"]
-            #print(symbol)
-            tick_size = 0
-            qty_step = 0
-            for f in r["filters"]:
-                if f["filterType"] == "PRICE_FILTER":
-                    tick_size = float(f["tickSize"])
-                elif f["filterType"] == "LOT_SIZE":
-                    qty_step = float(f["stepSize"])
-            self.tick_sizes[symbol] = tick_size
-            self.qty_steps[symbol] = qty_step
-
-    def getBase(self, symbol):
-        return self.symbol_base[symbol]
-
-    def getQuote(self, symbol):
-        return self.symbol_quote[symbol]
-
-    def priceRound(self, symbol, price):
-        return round(self.tick_sizes[symbol] * int(price / self.tick_sizes[symbol] + 0.5), 9)
-
-    def qtyRound(self, symbol, qty):
-        #print(self.qty_steps[symbol])
-        return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol] + 0.5), 9)
-
-    def priceRoundDown(self, symbol, price):
-        return round(self.tick_sizes[symbol] * int(price / self.tick_sizes[symbol]), 9)
-
-    def qtyRoundDown(self, symbol, qty):
-        #print(self.qty_steps[symbol])
-        return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol]), 9)
-
-    def dispatch_request(self, http_method):
-        session = requests.Session()
-        session.headers.update({
-            'Content-Type': 'application/json;charset=utf-8',
-            'X-MBX-APIKEY': self.apikey
-        })
-        return {
-            'GET': session.get,
-            'DELETE': session.delete,
-            'PUT': session.put,
-            'POST': session.post,
-        }.get(http_method, 'GET')
-
-    def get_timestamp(self):
-        return int(time.time() * 1000)
-
-    def hashing(self, query_string):
-        return hmac.new(self.secretkey.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
-
-    def send_signed_request(self, http_method, url_path, payload={}):
-        payload["recvWindow"] = self.recv_window
-        query_string = urlencode(payload, True)
-        if query_string:
-            query_string = "{}&timestamp={}".format(query_string, self.get_timestamp())
-        else:
-            query_string = 'timestamp={}'.format(self.get_timestamp())
-
-        url = self.baseurl + url_path + '?' + query_string + '&signature=' + self.hashing(query_string)
-        #print("{} {}".format(http_method, url))
-        params = {'url': url, 'params': {}}
-        response = self.dispatch_request(http_method)(**params)
-        return response.json()
-
-    def send_public_request(self, url_path, payload={}):
-        query_string = urlencode(payload, True)
-        url = self.baseurl + url_path
-        if query_string:
-            url = url + '?' + query_string
-        #print("{}".format(url))
-        response = self.dispatch_request('GET')(url=url)
-        return response.json()
-
-    def Account(self):
-        return self.send_signed_request("GET", "/api/v3/account")
-
-    def getChart(self, symbol, interval, start_t=0, end_t=0):
-
-        if not interval in ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w",
-                            "1M"]:
-            print("getChart: invalid interval")
-            return
-
-        payload = {"symbol": symbol, "interval": interval}
-        if start_t != 0:
-            payload["startTime"] = int(start_t.timestamp() * 1000)
-        if end_t != 0:
-            payload["endTime"] = int(end_t.timestamp() * 1000)
-
-        #payload = {"symbol":symbol,"interval":interval,"startTime":int(sT.timestamp()*1000),"endTime":int(eT.timestamp()*1000)}
-        raw = self.send_public_request("/api/v3/klines", payload=payload)
-        chart = {"t": [], "o": [], "h": [], "l": [], "c": [], "v": []}
-
-        for r in raw:
-            chart["t"].append(datetime.datetime.fromtimestamp(r[0] / 1000, datetime.timezone.utc))
-            chart["o"].append(float(r[1]))
-            chart["h"].append(float(r[2]))
-            chart["l"].append(float(r[3]))
-            chart["c"].append(float(r[4]))
-            chart["v"].append(float(r[5]))
-
-        # Creating DataFrame from raw data
-        columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time',
-                   'Quote Asset Volume', 'Number of Trades', 'Taker Buy Base Asset Volume',
-                   'Taker Buy Quote Asset Volume', 'Ignore']
-        df = pd.DataFrame(raw, columns=columns)
-        df['Time'] = pd.to_datetime(df['Time'], unit='ms')
-        df.set_index('Time', inplace=True)
-        df = df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
-
-        return chart, df
-
-    def getExchangeInfo(self):
-        raw = self.send_public_request("/api/v3/exchangeInfo")
-        return raw
-
-    def checkOrder(self, symbol, orderId):
-
-        payload = {"symbol": symbol, "orderId": orderId}
-        a = self.send_signed_request("GET", "/api/v3/order", payload=payload)
-        # "status": "FILLED" / "NEW" / "CANCELED" / "EXPIRED"
-        return a
-
-    def Buy(self, symbol, quantity, price):
-        payload = {"symbol": symbol, "side": "BUY", "quantity": self.qtyRound(symbol, quantity)}
-        if price == 0:
-            payload["type"] = "MARKET"
-        else:
-            payload["type"] = "LIMIT"
-            payload["timeInForce"] = "GTC"
-            payload["price"] = self.priceRound(symbol, price)
-        #print(payload)
-        a = self.send_signed_request("POST", "/api/v3/order", payload=payload)
-
-        #print(a)
-        if not "orderId" in a:
-            std_log(str(a))
-            std_log(payload)
-            std_log("Order error")
-            sys.exit()
-        std_log("[%s] Buy (quantity:%f, price:%f, orderID:%d)" % (symbol, quantity, price, a["orderId"]))
-
-        update_buy_order_id_for_symbol_pair(a, symbol)
-        buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
-        return a
-
-    def OrderCancel(self, symbol_pair, order_id):
-
-        cancel_payload = {
-            "symbol": symbol_pair,
-            "orderId": order_id
-        }
-
-        try:
-            cancel_response = self.send_signed_request("DELETE", "/api/v3/order", cancel_payload)
-            if cancel_response and cancel_response.get('status', '') == 'CANCELED':
-                buy_symbol_pair_order_id[symbol_pair] = 0
-                buy_symbol_pair_order_counter[symbol] -= 1
-                std_log(f"[{symbol_pair}] Order {order_id} canceled successfully.")
-                return cancel_response
-            else:
-                std_log(f"[{symbol_pair}] Failed to cancel order {order_id}. Response: {cancel_response}")
-                return None
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
-            return None
-
-    def ReplaceOrder(self, order_id, symbol_pair, side, quantity, price):
-
-        payload = {
-            "symbol": symbol_pair,
-            "side": side,
-            "type": "LIMIT",
-            "timeInForce": "GTC",
-            "cancelReplaceMode": "STOP_ON_FAILURE",
-            "cancelOrderId": order_id,
-            "quantity": self.qtyRound(symbol, quantity),
-            "price": self.priceRound(symbol, price)
-        }
-
-        try:
-            replaced_order_response = (
-                self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
-
-            std_log("[%s] BUY Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
-                    % (symbol, quantity, price, replaced_order_response["newOrderResponse"]["orderId"]))
-
-            update_buy_order_id_for_symbol_pair(replaced_order_response["newOrderResponse"], symbol)
-            buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
-
-            return replaced_order_response["newOrderResponse"]
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
-            return None
-
-    def ReplaceTakeProfitOrder(self, order_id, symbol_pair, buy_amount, new_price):
-
-        # Prepare the payload for the limit sell order
-        payload = {
-            "symbol": symbol_pair,
-            "side": "SELL",
-            "type": "LIMIT",
-            "timeInForce": "GTC",
-            "cancelReplaceMode": "STOP_ON_FAILURE",
-            "cancelOrderId": order_id,
-            "quantity": self.qtyRound(symbol, buy_amount),
-            "price": self.priceRound(symbol, new_price)
-        }
-
-        try:
-            replaced_order_response = (
-                self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
-            return replaced_order_response["newOrderResponse"]
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error canceling order {order_id}. Error Info: {e}")
-            return None
-
-    def GetContractPrice(self, symbol, orderId):
-        payload = {"symbol": symbol}
-        a = self.send_signed_request("GET", "/api/v3/myTrades", payload=payload)
-        price = -1
-        for order in a:
-            if order["orderId"] == int(orderId):
-                price = float(order["price"])
-                break
-        return price
-
-    def boundaryRemaining(self, tf):
-
-        # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"
-        t = datetime.datetime.now(datetime.timezone.utc)
-        if tf == "1m":
-            next_t = (t + datetime.timedelta(minutes=1)).replace(second=0, microsecond=0)
-        elif tf == "3m":
-            next_t = (t + datetime.timedelta(minutes=3 - t.minute % 3)).replace(second=0, microsecond=0)
-        elif tf == "5m":
-            next_t = (t + datetime.timedelta(minutes=5 - t.minute % 5)).replace(second=0, microsecond=0)
-        elif tf == "15m":
-            next_t = (t + datetime.timedelta(minutes=15 - t.minute % 15)).replace(second=0, microsecond=0)
-        elif tf == "30m":
-            next_t = (t + datetime.timedelta(minutes=30 - t.minute % 30)).replace(second=0, microsecond=0)
-        elif tf == "1h":
-            next_t = (t + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-        elif tf == "2h":
-            next_t = (t + datetime.timedelta(hours=2 - t.hour % 2)).replace(minute=0, second=0, microsecond=0)
-        elif tf == "4h":
-            next_t = (t + datetime.timedelta(hours=4 - t.hour % 4)).replace(minute=0, second=0, microsecond=0)
-        elif tf == "6h":
-            next_t = (t + datetime.timedelta(hours=6 - t.hour % 6)).replace(minute=0, second=0, microsecond=0)
-        elif tf == "8h":
-            next_t = (t + datetime.timedelta(hours=8 - t.hour % 8)).replace(minute=0, second=0, microsecond=0)
-        elif tf == "12h":
-            next_t = (t + datetime.timedelta(hours=12 - t.hour % 12)).replace(minute=0, second=0, microsecond=0)
-        elif tf == "1d":
-            next_t = (t + datetime.timedelta(hours=24)).replace(hour=0, minute=0, second=0, microsecond=0)
-        elif tf == "3d":
-            day_pivot = datetime.datetime(2017, 8, 17, 0, 0)
-            next_t = (t + datetime.timedelta(days=3 - (t - day_pivot).days % 3)).replace(hour=0, minute=0, second=0,
-                                                                                         microsecond=0)
-        elif tf == "1w":  # Monday 0am
-            next_t = (t + datetime.timedelta(days=7 - t.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-        elif tf == "1M":  # 0am
-            if t.month == 12:
-                next_t = datetime.datetime(t.year + 1, 1, 1, 0, 0, 0)
-            else:
-                next_t = datetime.datetime(t.year, t.month + 1, 1, 0, 0, 0)
-        remaining = next_t - t
-        return remaining
-
-    def calculate_bollinger_bands(prices: Series, window=20, num_std=2):
-
-        """Calculate the Bollinger Bands."""
-        rolling_mean = prices.rolling(window=window).mean()
-        rolling_std = prices.rolling(window=window).std()
-        upper_band = rolling_mean + (rolling_std * num_std)
-        lower_band = rolling_mean - (rolling_std * num_std)
-        return upper_band, lower_band
-
-    def replace_position_with_new_limit_order(self, symbol_pair, order_id, buy_amount, new_price):
-        try:
-            self.ReplaceOrder(order_id, symbol_pair, "BUY", buy_amount, new_price)
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error modifying order. Error Info: {e}")
-            return None
-
-    def get_current_price(self, symbol):
-        """
-        Fetch the current price of a cryptocurrency symbol from Binance.
-
-        Args:
-        symbol (str): The symbol pair to fetch the price for, e.g., 'BTCUSDT'.
-
-        Returns:
-        float: The current price of the symbol or None if fetch fails.
-        """
-
-        payload = {
-            "symbol": symbol
-        }
-
-        try:
-            response = self.send_public_request('/api/v3/ticker/price', payload)  # Assuming send_request is for unsigned requests
-            if response and 'price' in response:
-                return float(response['price'])
-            else:
-                std_log(f"Failed to fetch current price for {symbol}. Response: {response}")
-        except Exception as e:
-            std_log(f"Error fetching current price for {symbol}. Error Info: {e}")
-        return None
-
-    def place_limit_sell_order(self, symbol, quantity, limit_price):
-        """
-        Place a limit order to sell a cryptocurrency at a specified price.
-
-        Args:
-        symbol (str): The trading pair symbol, e.g., 'BTCUSDT'.
-        quantity (float): The amount of the cryptocurrency to sell.
-        limit_price (float): The price at which the order should execute.
-        """
-
-        # Prepare the payload for the limit sell order
-        payload = {
-            "symbol": symbol,
-            "side": "SELL",
-            "type": "LIMIT",
-            "timeInForce": "GTC",  # Good till cancelled
-            "quantity": self.qtyRound(symbol, quantity),
-            "price": self.priceRound(symbol, limit_price)
-        }
-
-        try:
-            response = self.send_signed_request("POST", "/api/v3/order", payload)
-            if response and 'orderId' in response:
-                std_log(f"[{symbol}] Limit Sell Order Placed. Sell at: {limit_price}, Order ID: {response['orderId']}")
-                return response
-            else:
-                std_log(f"[{symbol}] Failed to place limit sell order. Response: {response}")
-                return None
-        except Exception as e:
-            std_log(f"[{symbol}] Error placing limit sell order. Error Info: {e}")
-            return None
-
-    def set_take_profit(self, symbol_pair, quantity, price):
-
-        """
-               Place a limit order to sell a cryptocurrency at a specified price.
-
-               Args:
-               symbol (str): The trading pair symbol, e.g., 'BTCUSDT'.
-               buy_amount (float): The amount of the cryptocurrency to sell.
-               price (float): The price at which the order should execute.
-               """
-
-        # Prepare the payload for the limit sell order
-        payload = {
-            "symbol": symbol_pair,
-            "side": "SELL",
-            "type": "LIMIT",
-            "timeInForce": "GTC",  # Good till cancelled
-            "quantity": self.qtyRound(symbol, quantity),
-            "price": self.priceRound(symbol, price)
-        }
-
-        try:
-            response = self.send_signed_request("POST", "/api/v3/order", payload)
-            if response and 'orderId' in response:
-                update_take_profit_order_id_for_symbol_pair(response, symbol_pair)
-                buy_symbol_pair_target_order_status[symbol] = TakeProfitStatus.PLACED
-                std_log(f"[{symbol_pair}] Target Order Placed. Will Sell {quantity} of {symbol_pair} at: {price}!"
-                        f" Order ID: {response['orderId']}")
-                return response
-            else:
-                std_log(f"[{symbol_pair}] Failed to place target order. Response: {response}")
-                return None
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error placing target order. Error Info: {e}")
-            return None
-
-    def update_take_profit(self, symbol_pair, order_id, quantity, new_take_profit_price):
-
-        try:
-
-            response = self.ReplaceTakeProfitOrder(order_id, symbol_pair, quantity, new_take_profit_price)
-
-            if response and 'orderId' in response:
-
-                update_take_profit_order_id_for_symbol_pair(response, symbol_pair)
-                buy_symbol_pair_target_order_status[symbol_pair] = TakeProfitStatus.PLACED
-
-                std_log("[%s] Target Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
-                        % (symbol_pair, quantity, new_take_profit_price, response["orderId"]))
-
-                return response
-
-            else:
-                std_log(f"[{symbol_pair}] Failed to place new take profit order. Response: {response}")
-                return None
-
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error placing take_profit for order. Error Info: {e}")
-            return None
-
-    def check_order_status(self, symbol_pair, order_id):
-
-        try:
-            # Using the client to fetch order status
-            response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
-
-            if response:
-                order_status = response
-                std_log(f"[{symbol_pair}] Order ID [{order_id}] with status: [{order_status['status']}]")
-                return order_status['status']
-            else:
-                std_log(f"[{symbol_pair}] No response received for order status request.")
-                return None
-
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error checking order status. Error Info: {str(e)}")
-            return None
-
-    def check_target_order_status(self, symbol_pair, order_id):
-
-        try:
-            # Using the client to fetch order status
-            response = self.checkOrder(symbol=symbol_pair, orderId=order_id)
-
-            if response:
-                order_status = response
-                std_log(f"[{symbol_pair}] Target Order ID [{order_id}] with status: [{order_status['status']}]")
-                return order_status['status']
-            else:
-                std_log(f"[{symbol_pair}] No response received for target order status request.")
-                return None
-
-        except Exception as e:
-            std_log(f"[{symbol_pair}] Error checking target order status. Error Info: {str(e)}")
-            return None
-
-
 if __name__ == "__main__":
 
-    # Secrets & Parameters 👇🔐
-    CONFIG_PATH = os.getenv('CONFIG_PATH')
-    EXCEL_NAME = "/Bot_config.xlsx"
+    (buy_timedelta,
+     buy_timeframe,
+     buy_order_type,
+     order_size,
+     h_period,
+     demo,
+     buy_limit) = configure_parameters(CONFIG_PATH + "/Bot_config.xlsx")
 
-    strategies = []
-    buy_timeframe = "1m"
-    tdelta_conv = {"1m": datetime.timedelta(minutes=1), "3m": datetime.timedelta(minutes=3),
-                   "5m": datetime.timedelta(minutes=5), "15m": datetime.timedelta(minutes=15),
-                   "30m": datetime.timedelta(minutes=30), "1h": datetime.timedelta(hours=1),
-                   "2h": datetime.timedelta(hours=2), "4h": datetime.timedelta(hours=4),
-                   "6h": datetime.timedelta(hours=6), "8h": datetime.timedelta(hours=8),
-                   "12h": datetime.timedelta(hours=12), "1d": datetime.timedelta(days=1),
-                   "3d": datetime.timedelta(days=3), "1w": datetime.timedelta(days=7)}
-    set_filled = [False, ] * 6
+    binance = configure_binance_client()
 
-    buy_timeframe = {}
-    buy_order_type = {}
-    order_size = {}
-    h_period = {}
-    l_period = {}
-    buy_limit = 0
-
-    # 0.1. Read excel
-    config = openpyxl.load_workbook(CONFIG_PATH + EXCEL_NAME)
-    sheet = config.worksheets[0]
-
-    for row_n in range(2, 100):
-        if sheet.cell(row=row_n, column=1).value == "END OF CONFIGURATION":
-            break
-        if sheet.cell(row=row_n, column=3).value == "BUY":
-            symbol = sheet.cell(row=row_n, column=1).value
-            if not symbol in symbols:
-                symbols.append(symbol)
-            buy_timeframe[symbol] = sheet.cell(row=row_n, column=4).value
-            buy_order_type[symbol] = sheet.cell(row=row_n, column=5).value
-            order_size[symbol] = float(sheet.cell(row=row_n, column=6).value)
-            h_period[symbol] = int(sheet.cell(row=row_n, column=7).value)
-        elif sheet.cell(row=row_n, column=1).value == "Open positions limit":
-            buy_limit = int(sheet.cell(row=row_n, column=2).value)
-        elif sheet.cell(row=row_n, column=1).value == "Demo trading":
-            demo = sheet.cell(row=row_n, column=2).value
-
-    std_log("[Booting] Buy timeframes %s" % str(buy_timeframe))
-    std_log("[Booting] Buy order type %s" % str(buy_order_type))
-    std_log("[Booting] Order size %s" % str(order_size))
-    std_log("[Booting] Highest period %s" % str(h_period))
-    std_log("[Booting] Open positions limit %s" % str(buy_limit))
-    std_log("[Booting] Demo account: %s" % str(demo))
-
-    buy_timedelta = {}
-    for symbol in symbols:
-        if symbol in buy_timeframe:
-            buy_timedelta[symbol] = tdelta_conv[buy_timeframe[symbol]]  # to get candle closing period
-        else:
-            buy_timedelta[symbol] = None  # or some default value, or skip setting it altogether
-
-    test_api_key = os.getenv('TEST_API_KEY')
-    test_api_secret = os.getenv('TEST_API_SECRET')
-    api_key = os.getenv('API_KEY')
-    api_secret = os.getenv('API_SECRET')
-
-    # Legacy Client Initialization
-    binance = Binance(test=demo, apikey='', secretkey='')
-
-    if demo:
-        binance = Binance(test=demo, apikey=test_api_key, secretkey=test_api_secret)
-    else:
-        binance = Binance(test=demo, apikey=api_key, secretkey=api_secret)
-
-    std_log("[Booting] Complete")
-
-    old_remain_buy = {}
-    old_remain_sell = {}
-    for symbol in symbols:
-        old_remain_buy[symbol] = datetime.timedelta(days=365)  # to get candle closing period
-        old_remain_sell[symbol] = datetime.timedelta(days=365)  # to get candle closing period
+    old_remain_buy = set_old_remain_buy()
 
     set_dicts(symbols)
+
+    std_log("[Booting] Complete")
 
     for symbol in symbols:
         (chart, chart_df, quantity) = get_chart_data(order_size,
