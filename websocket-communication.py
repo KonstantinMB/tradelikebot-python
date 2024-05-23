@@ -22,9 +22,31 @@ def keep_user_data_stream_alive(listen_key):
     headers = {'X-MBX-APIKEY': API_KEY}
     requests.put(url, headers=headers)
 
+
 def on_message(ws, message):
-    print("Received message:")
-    print(json.loads(message))
+    try:
+        # Convert the message string to a Python dictionary
+        data = json.loads(message)
+
+        # Check if the message type is 'executionReport' and the order status is 'FILLED'
+        if data.get('e') == 'executionReport' and data.get('X') == 'FILLED':
+            print("Received a filled execution report:")
+            print(json.dumps(data, indent=4))
+
+            # Here you can add the logic to handle a filled order
+            handle_filled_order(data)
+
+    except json.JSONDecodeError:
+        print("Error decoding the JSON message")
+    except Exception as e:
+        print("Error handling message:", str(e))
+
+
+def handle_filled_order(order_data):
+    # Example function to handle the order logic
+    print("Handling filled order with ID:", order_data['i'])
+    # Perform actions based on the order_data like sending notifications, updating database, etc.
+
 
 def on_error(ws, error):
     print("Error:", error)
@@ -36,12 +58,14 @@ def on_open(ws):
     print("Stream opened.")
 
 def websocket_app(listen_key):
+    print("websocket app")
     websocket.enableTrace(True)
     ws = websocket.WebSocketApp(f"wss://stream.binance.com:9443/ws/{listen_key}",
                                 on_message=on_message,
                                 on_error=on_error,
                                 on_close=on_close)
     ws.on_open = on_open
+    print("listening")
     ws.run_forever()
 
 if __name__ == "__main__":
