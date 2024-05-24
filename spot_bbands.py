@@ -31,6 +31,7 @@ ema_short_period = 45
 ema_long_period = 100
 regime_filter = 480
 
+fee_percent = 0.01
 order_status = {}
 target_order_status = {}
 
@@ -38,6 +39,8 @@ target_order_status = {}
 buy_symbol_pair_order_counter = {}
 buy_symbol_pair_order_id = {}
 buy_symbol_pair_order_status = {}
+buy_symbol_pair_fee = {}
+buy_symbol_pair_quantity_after_fee = {}
 
 # Take Profit Parameters
 buy_symbol_pair_target_counter = {}
@@ -102,6 +105,9 @@ class Binance():
 
     def qtyRound(self, symbol, qty):
         return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol] + 0.5), 9)
+
+    def qtyRoundDown(self, symbol, qty):
+        return round(self.qty_steps[symbol] * int(qty / self.qty_steps[symbol]), 9)
 
     def dispatch_request(self, http_method):
         session = requests.Session()
@@ -223,9 +229,10 @@ class Binance():
 
         update_buy_order_id_for_symbol_pair(a, symbol)
         buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+        buy_symbol_pair_fee[symbol] = calculate_fee(rounded_qty, price)
         return a
 
-    def ReplaceOrder(self, order_id, symbol_pair, quantity, price):
+    def ReplaceOrder(self, order_id, symbol_pair, quantity, new_price):
 
         payload = {
             "symbol": symbol_pair,
@@ -235,7 +242,7 @@ class Binance():
             "cancelReplaceMode": "STOP_ON_FAILURE",
             "cancelOrderId": order_id,
             "quantity": quantity,
-            "price": self.priceRound(symbol, price)
+            "price": self.priceRound(symbol_pair, new_price)
         }
 
         try:
@@ -243,10 +250,11 @@ class Binance():
                 self.send_signed_request("POST", "/api/v3/order/cancelReplace", payload))
 
             std_log("[%s] BUY Order Replaced. New Order Parameters: (quantity:%f, price:%f, orderID:%d)"
-                    % (symbol, quantity, price, replaced_order_response["newOrderResponse"]["orderId"]))
+                    % (symbol_pair, quantity, new_price, replaced_order_response["newOrderResponse"]["orderId"]))
 
             update_buy_order_id_for_symbol_pair(replaced_order_response["newOrderResponse"], symbol)
             buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+            buy_symbol_pair_fee[symbol] = calculate_fee(rounded_qty, new_price)
 
             return replaced_order_response["newOrderResponse"]
         except Exception as e:
@@ -254,6 +262,9 @@ class Binance():
             return None
 
     def ReplaceTakeProfitOrder(self, order_id, symbol_pair, quantity, new_price):
+
+        target_price = self.priceRound(symbol, new_price)
+        take_profit_quantity_after_fees = buy_symbol_pair_quantity_after_fee[symbol_pair]
 
         # Prepare the payload for the limit sell order
         payload = {
@@ -263,11 +274,11 @@ class Binance():
             "timeInForce": "GTC",
             "cancelReplaceMode": "STOP_ON_FAILURE",
             "cancelOrderId": order_id,
-            "quantity": quantity,
-            "price": self.priceRound(symbol, new_price)
+            "quantity": take_profit_quantity_after_fees,
+            "price": target_price
         }
 
-        std_log("[%s] Quantity: %f" % (symbol_pair, quantity))
+        std_log("[%s] Quantity: %f" % (symbol_pair, take_profit_quantity_after_fees))
 
         try:
             replaced_order_response = (
@@ -326,6 +337,16 @@ class Binance():
             std_log(f"[{symbol_pair}] Error modifying order. Error Info: {e}")
             return None
 
+    def quantity_after_fees(self, symbol_pair, rounded_quantity, buy_price):
+
+        # Calculate the fee based on the buy order
+        fee = buy_symbol_pair_fee[symbol_pair]
+        after_fee_quantity = rounded_quantity - (fee / buy_price)  # Adjust the quantity for the fee
+
+        # Round the quantity down to match the asset's quantity step
+        buy_symbol_pair_quantity_after_fee[symbol_pair] = self.qtyRoundDown(symbol_pair, after_fee_quantity)
+        return buy_symbol_pair_quantity_after_fee[symbol_pair]
+
     def set_take_profit(self, symbol_pair, take_profit_quantity, price):
 
         """
@@ -337,6 +358,10 @@ class Binance():
                price (float): The price at which the order should execute.
                """
 
+        target_price = self.priceRound(symbol, price)
+        buy_symbol_pair_quantity_after_fee[symbol_pair] = self.quantity_after_fees(symbol_pair, take_profit_quantity, target_price)
+        take_profit_quantity = buy_symbol_pair_quantity_after_fee[symbol_pair]
+
         # Prepare the payload for the limit sell order
         payload = {
             "symbol": symbol_pair,
@@ -344,7 +369,7 @@ class Binance():
             "type": "LIMIT",
             "timeInForce": "GTC",  # Good till cancelled
             "quantity": take_profit_quantity,
-            "price": self.priceRound(symbol, price)
+            "price": target_price
         }
 
         std_log("[%s] Quantity: %f" % (symbol_pair, take_profit_quantity))
@@ -420,15 +445,14 @@ class WebSocketHandler:
             self.handle_filled_order(data)
 
     def on_error(self, ws, error):
+        std_log("[WebSocket] Error: {%s}" % error)
         print("WebSocket error:", error)
 
     def on_close(self, ws):
-        print("WebSocket closed")
-        # Optionally attempt to reconnect
-        self.start()
+        std_log("[WebSocket] Connection Closed")
 
     def on_open(self, ws):
-        std_log("WebSocket Connection Opened")
+        std_log("[WebSocket] Connection Opened")
 
     def start_listening(self):
         """Start the WebSocket connection and schedule the listen key renewal."""
@@ -462,7 +486,7 @@ class WebSocketHandler:
         if order_type == 'SELL' and order_id == buy_symbol_pair_target_order_id[order_symbol]:
             target_order_status[order_symbol] = OrderStatus.POSITION
 
-        std_log("[%s] %s Order { %s } is FILLED" % (order_type, order_symbol, order_data['i']))
+        std_log("[%s] %s Order { %s } is FILLED" % (order_symbol, order_type, order_data['i']))
 
 
 def validate_order_status(symbol_pair):
@@ -549,6 +573,21 @@ def set_old_remain_buy():
         old_remain_buy[symbol] = datetime.timedelta(days=365)  # to get candle closing period
 
     return old_remain_buy
+
+def calculate_fee(amount, price):
+    """
+    Calculate the trading fee for a given order.
+
+    Args:
+    amount (float): The amount of the asset being bought or sold.
+    price (float): The price at which the asset is traded.
+
+    Returns:
+    float: The total fee in terms of the traded asset.
+    """
+    total_trade_value = amount * price
+    fee = total_trade_value * (fee_percent / 100)
+    return fee
 
 
 def calculate_position_size(binance_client: Binance, symbol, set_order_size, close_price):
@@ -669,11 +708,12 @@ def get_chart_data(binance_client: Binance, order_size, symbol, interval, start_
 def reset_dict_for_symbol(symbol):
     order_status[symbol] = OrderStatus.OPEN_ORDER
     target_order_status[symbol] = OrderStatus.OPEN_ORDER
-    order_quantity[symbol] = 0
 
     buy_symbol_pair_order_counter[symbol] = 0
     buy_symbol_pair_order_id[symbol] = 0
     buy_symbol_pair_order_status[symbol] = OrderStatus.OPEN_ORDER
+    buy_symbol_pair_fee[symbol] = 0
+    buy_symbol_pair_quantity_after_fee[symbol] = 0
 
     buy_symbol_pair_target_counter[symbol] = 0
     buy_symbol_pair_target_order_id[symbol] = 0
@@ -682,17 +722,20 @@ def reset_dict_for_symbol(symbol):
 
 
 def set_dicts(symbols):
-    global order_status, target_order_status, order_quantity, buy_symbol_pair_order_counter, buy_symbol_pair_order_id, \
+
+    global order_status, target_order_status, buy_symbol_pair_order_counter, buy_symbol_pair_order_id, \
+        buy_symbol_pair_fee, buy_symbol_pair_quantity_after_fee, \
         buy_symbol_pair_target_order_count, buy_symbol_pair_target_counter, buy_symbol_pair_target_order_id, \
         buy_symbol_pair_order_status, buy_symbol_pair_order_status, buy_symbol_pair_target_order_status
 
     order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
     target_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
-    order_quantity = {symbol: 0 for symbol in symbols}
 
     buy_symbol_pair_order_counter = {symbol: 0 for symbol in symbols}
     buy_symbol_pair_order_id = {symbol: 0 for symbol in symbols}
     buy_symbol_pair_order_status = {symbol: OrderStatus.OPEN_ORDER for symbol in symbols}
+    buy_symbol_pair_fee = {symbol: 0 for symbol in symbols}
+    buy_symbol_pair_quantity_after_fee = {symbol: 0 for symbol in symbols}
 
     buy_symbol_pair_target_counter = {symbol: 0 for symbol in symbols}
     buy_symbol_pair_target_order_id = {symbol: 0 for symbol in symbols}
@@ -862,8 +905,7 @@ if __name__ == "__main__":
 
                             else:
                                 std_log(
-                                    "[%s] Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set. "
-                                    "Latest Data Point: [%s]" % (symbol, chart_df.iloc[-1].transpose()))
+                                    "[%s] Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set.")
 
                 old_remain_buy[symbol] = remain
 
