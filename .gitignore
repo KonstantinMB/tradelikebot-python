@@ -1,5 +1,7 @@
 # .gitignore
 .env
 log*
+logs*
 balance.txt
 websocket-communication.py
+connection-details.txt
