@@ -5,3 +5,4 @@ logs*
 balance.txt
 websocket-communication.py
 connection-details.txt
+bot.log
