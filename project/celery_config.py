@@ -1,4 +1,3 @@
-# celery_config.py
 from celery import Celery
 
 celery_app = Celery(
@@ -16,5 +15,5 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     worker_prefetch_multiplier=1,  # This tells workers to fetch one message at a time
-    task_acks_late=True,  # Ensures tasks are acknowledged after they're completed
+    task_acks_late=True  # Ensures tasks are acknowledged after they're completed
 )

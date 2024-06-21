@@ -1,0 +1,249 @@
+2024-06-10 15:15:12,087 - project.main - INFO - Trade initiated for BTCUSDT, task id: 32e6a499-e5a7-483e-aef4-ccaa410f5eff
+2024-06-10 15:17:28,072 - project.main - INFO - Trade initiated for BTCUSDT, task id: 70fbcfd9-8f14-45e0-91d3-103b23c23410
+2024-06-11 13:14:28,367 - project.main - INFO - Trade initiated for BTCUSDT, task id: aba88e26-c246-49f1-9592-a989296b8b16
+2024-06-11 13:21:24,387 - project.main - ERROR - Error retrieving task status for task_id aba88e26-c246-49f1-9592-a989296b8b16: Object of type KeyError is not JSON serializable
+2024-06-11 13:21:27,710 - project.main - ERROR - Error retrieving task status for task_id aba88e26-c246-49f1-9592-a989296b8b16: Object of type KeyError is not JSON serializable
+2024-06-11 13:22:11,281 - project.main - INFO - Trade initiated for BTCUSDT, task id: ccdbc7a5-a3b9-4f46-b6dc-d8b7cbba3091
+2024-06-11 13:24:02,060 - project.main - INFO - Trade initiated for BTCUSDT, task id: c77dd66b-b7aa-47d2-b6ae-96ce80ef430c
+2024-06-11 13:31:14,249 - project.main - INFO - Trade initiated for BTCUSDT, task id: f2667488-2ce6-4ef3-89f5-52ed2bb47772
+2024-06-11 13:48:00,578 - project.main - INFO - Trade initiated for BTCUSDT, task id: b81388da-90b1-4cb5-bffa-282282a4366e
+2024-06-11 13:55:16,337 - project.main - INFO - Trade initiated for BTCUSDT, task id: b14d5ba7-7fcf-4f67-ba01-5748dbe2f872
+2024-06-11 15:14:02,283 - project.main - INFO - Trade initiated for BTCUSDT, task id: 3ab89e9a-3ee8-467a-9701-0e2fd25a663d
+2024-06-11 15:40:21,345 - project.main - INFO - Trade initiated for BTCUSDT, task id: d4bb0451-41ad-4d4b-8372-8c6de5d75481
+2024-06-11 15:55:10,273 - project.main - INFO - Trade initiated for BTCUSDT, task id: 53825a82-41ae-44eb-945e-579aaa410ac7
+2024-06-11 16:03:50,256 - project.main - INFO - Trade initiated for BTCUSDT, task id: 213339bd-50c7-4cbf-a49c-163917dd41ba
+2024-06-11 16:05:26,068 - project.main - INFO - Trade initiated for BTCUSDT, task id: 3eb42f57-05af-461f-b630-e178441b5dbe
+2024-06-11 16:09:42,178 - project.main - INFO - Trade initiated for BTCUSDT, task id: 95be4cdd-8f66-4544-b0a2-785d712b0f67
+2024-06-11 16:12:18,772 - project.main - INFO - Trade initiated for BTCUSDT, task id: b192d3b1-c61f-4148-9dd8-def1d131b335
+2024-06-11 17:24:32,408 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"1m","demo":false}
+2024-06-11 17:24:32,513 - project.main - INFO - Trade initiated for BTCUSDT, task id: e5085e89-331a-40bf-9055-34f4725df82f
+2024-06-12 07:30:12,393 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"1h","demo":false}
+2024-06-12 07:30:12,560 - project.main - INFO - Trade initiated for BTCUSDT, task id: 78c43a5b-3b81-4751-8334-6ceb12cea598
+2024-06-12 09:43:34,171 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"4h","demo":false}
+2024-06-12 09:43:34,336 - project.main - INFO - Trade initiated for BTCUSDT, task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-12 09:46:39,467 - project.main - INFO - Stop trade requested for task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-12 09:51:49,179 - project.main - INFO - Stop trade requested for task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-12 09:52:08,303 - project.main - INFO - Stop trade requested for task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-12 09:52:44,624 - project.main - INFO - Stop trade requested for task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-12 09:54:48,636 - project.main - INFO - Stop trade requested for task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-12 09:56:12,056 - project.main - INFO - Stop trade requested for task id: d86997ca-dba8-402e-ba53-d310b3ceb9ba
+2024-06-13 10:53:18,464 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 10:53:18,481 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 10:56:26,486 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 10:56:26,490 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 10:58:07,721 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 10:58:08,191 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 10:58:46,084 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 1500}]
+2024-06-13 10:58:46,126 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 1500}]
+2024-06-13 11:03:19,246 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 1500}]
+2024-06-13 11:03:19,323 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 1500}]
+2024-06-13 11:03:49,517 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 1500}]
+2024-06-13 11:03:49,555 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 1500}]
+2024-06-13 11:55:36,078 - project.db.trades_repo - INFO - []
+2024-06-13 11:55:36,090 - project.db.trades_repo - INFO - []
+2024-06-13 12:01:50,339 - project.db.trades_repo - INFO - []
+2024-06-13 12:01:50,406 - project.db.trades_repo - INFO - []
+2024-06-13 12:04:18,419 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"1h","demo":false}
+2024-06-13 12:04:18,593 - project.main - INFO - Trade initiated for BTCUSDT, task id: 676aebaa-0d5f-4777-8d39-868a7b652c6c
+2024-06-13 12:04:23,423 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:04:23,684 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:06:29,949 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:06:30,569 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:06:46,659 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:06:46,738 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:07:12,499 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:07:12,556 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:09:55,956 - project.db.trades_repo - INFO - []
+2024-06-13 12:09:56,463 - project.db.trades_repo - INFO - []
+2024-06-13 12:15:30,054 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"1h","demo":false}
+2024-06-13 12:15:30,152 - project.main - INFO - Trade initiated for BTCUSDT, task id: 04a5dbaa-e6ef-42d9-b943-ec6254c2df14
+2024-06-13 12:22:34,946 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:22:35,037 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:26:53,840 - project.db.trades_repo - INFO - []
+2024-06-13 12:26:53,946 - project.db.trades_repo - INFO - []
+2024-06-13 12:27:13,067 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:27:13,079 - project.main - INFO - Trade initiated for BTCUSDT, task id: c874de33-d403-4c5b-be5a-7084d9399044
+2024-06-13 12:27:19,103 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:27:19,207 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:31:22,827 - project.db.trades_repo - INFO - []
+2024-06-13 12:31:22,831 - project.db.trades_repo - INFO - []
+2024-06-13 12:31:35,982 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","order_size":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:31:36,060 - project.main - INFO - Trade initiated for BTCUSDT, task id: d1abcc99-80d1-4d3e-b635-9e172bcf06ee
+2024-06-13 12:39:59,087 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:39:59,092 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 0}]
+2024-06-13 12:57:15,783 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:57:15,797 - project.main - ERROR - Error processing trade request: execute_trade() got an unexpected keyword argument 'order_size'
+2024-06-13 12:57:45,437 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:57:45,440 - project.main - ERROR - Error processing trade request: execute_trade() got an unexpected keyword argument 'order_size'
+2024-06-13 12:57:49,514 - project.db.trades_repo - INFO - []
+2024-06-13 12:57:49,629 - project.db.trades_repo - INFO - []
+2024-06-13 12:58:07,455 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:58:07,456 - project.main - ERROR - Error processing trade request: execute_trade() got an unexpected keyword argument 'order_size'
+2024-06-13 12:58:37,133 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:58:37,135 - project.main - ERROR - Error processing trade request: execute_trade() got an unexpected keyword argument 'order_size'
+2024-06-13 12:59:09,950 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 12:59:10,029 - project.main - INFO - Trade initiated for BTCUSDT, task id: bfda568e-5a34-408f-bc54-7d9a5b3d0745
+2024-06-13 12:59:15,773 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-13 12:59:15,998 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-13 13:06:58,381 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-13 13:06:58,422 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-13 13:07:03,455 - project.main - INFO - Stop trade requested for task id: 676aebaa-0d5f-4777-8d39-868a7b652c6c
+2024-06-13 13:07:03,771 - project.db.trades_repo - INFO - []
+2024-06-13 13:07:08,373 - project.db.trades_repo - INFO - []
+2024-06-13 13:07:08,497 - project.db.trades_repo - INFO - []
+2024-06-13 13:18:14,036 - project.db.trades_repo - INFO - []
+2024-06-13 13:18:14,038 - project.db.trades_repo - INFO - []
+2024-06-13 13:20:05,617 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:20:05,764 - project.main - INFO - Trade initiated for , task id: c0e83159-6e9a-42a9-ae73-14cafc006e8d
+2024-06-13 13:20:10,910 - project.db.trades_repo - INFO - []
+2024-06-13 13:20:11,050 - project.db.trades_repo - INFO - []
+2024-06-13 13:25:46,609 - project.db.trades_repo - INFO - []
+2024-06-13 13:25:46,615 - project.db.trades_repo - INFO - []
+2024-06-13 13:26:16,105 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:26:16,196 - project.main - INFO - Trade initiated for , task id: d49326b9-37bf-4400-946c-17118fae8605
+2024-06-13 13:26:20,487 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-13 13:26:20,637 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-13 13:26:37,654 - project.main - INFO - Stop trade requested for task id: c0e83159-6e9a-42a9-ae73-14cafc006e8d
+2024-06-13 13:26:37,944 - project.db.trades_repo - INFO - []
+2024-06-13 13:33:53,788 - project.db.trades_repo - INFO - []
+2024-06-13 13:33:53,791 - project.db.trades_repo - INFO - []
+2024-06-13 13:34:11,568 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:34:11,649 - project.main - INFO - Trade initiated for , task id: 692d0fed-9b28-413b-a119-2fe64d7b4a42
+2024-06-13 13:34:12,214 - project.db.trades_repo - INFO - []
+2024-06-13 13:34:18,767 - project.db.trades_repo - INFO - []
+2024-06-13 13:34:18,890 - project.db.trades_repo - INFO - []
+2024-06-13 13:35:57,285 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:35:57,293 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:36:13,989 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:36:13,990 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:37:42,828 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:37:42,830 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:40:32,363 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:40:32,365 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:40:36,683 - project.db.trades_repo - INFO - []
+2024-06-13 13:40:36,976 - project.db.trades_repo - INFO - []
+2024-06-13 13:40:58,469 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:40:58,471 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:41:01,711 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:41:01,712 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:43:15,336 - project.db.trades_repo - INFO - []
+2024-06-13 13:43:15,733 - project.db.trades_repo - INFO - []
+2024-06-13 13:43:43,412 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"ETHUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:43:43,413 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-13 13:43:47,175 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"ETHUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-13 13:43:47,175 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-14 06:26:28,988 - project.db.trades_repo - INFO - []
+2024-06-14 06:26:29,075 - project.db.trades_repo - INFO - []
+2024-06-14 06:29:21,927 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 06:29:21,940 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-14 06:31:44,456 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 06:31:44,470 - project.main - ERROR - Error processing trade request: execute_trade() got multiple values for argument 'user_id'
+2024-06-14 07:23:13,792 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:23:13,801 - project.main - ERROR - Error processing trade request: execute_trade() got an unexpected keyword argument 'quantity'
+2024-06-14 07:25:39,943 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:25:40,036 - project.main - INFO - Trade initiated for BTCUSDT, task id: e709b00c-9967-40f4-9844-63bdb2aa0b94
+2024-06-14 07:25:41,036 - project.db.trades_repo - INFO - []
+2024-06-14 07:28:05,952 - project.db.trades_repo - INFO - []
+2024-06-14 07:28:05,955 - project.db.trades_repo - INFO - []
+2024-06-14 07:28:14,218 - project.db.trades_repo - INFO - []
+2024-06-14 07:28:14,402 - project.db.trades_repo - INFO - []
+2024-06-14 07:28:35,133 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:28:35,244 - project.main - INFO - Trade initiated for , task id: ac7b8d25-463e-409a-be8c-37106878560e
+2024-06-14 07:28:35,729 - project.db.trades_repo - INFO - []
+2024-06-14 07:28:49,658 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 07:28:49,970 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 07:29:26,467 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 07:29:26,648 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 07:34:10,445 - project.db.trades_repo - INFO - []
+2024-06-14 07:34:10,776 - project.db.trades_repo - INFO - []
+2024-06-14 07:34:32,886 - project.db.trades_repo - INFO - []
+2024-06-14 07:34:33,173 - project.db.trades_repo - INFO - []
+2024-06-14 07:35:48,410 - project.db.trades_repo - INFO - []
+2024-06-14 07:35:48,700 - project.db.trades_repo - INFO - []
+2024-06-14 07:36:04,141 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:36:04,155 - project.main - INFO - Trade initiated for , task id: 470e19f6-01da-42ef-ac86-ac82d6458886
+2024-06-14 07:36:04,761 - project.db.trades_repo - INFO - []
+2024-06-14 07:36:09,523 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 07:36:09,725 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 07:37:05,104 - project.db.trades_repo - INFO - []
+2024-06-14 07:37:05,319 - project.db.trades_repo - INFO - []
+2024-06-14 07:37:20,549 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:37:20,562 - project.main - INFO - Trade initiated for , task id: b39dd91e-90fa-4429-a95a-113abbbf7d3a
+2024-06-14 07:37:20,813 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:01,994 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:02,309 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:20,934 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:38:20,944 - project.main - INFO - Trade initiated for , task id: d8de0b4c-8e66-4e89-b222-0d0f88b3bbbc
+2024-06-14 07:38:21,242 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:30,401 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:30,668 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:35,793 - project.db.trades_repo - INFO - []
+2024-06-14 07:38:36,000 - project.db.trades_repo - INFO - []
+2024-06-14 07:39:56,383 - project.db.trades_repo - INFO - []
+2024-06-14 07:39:56,675 - project.db.trades_repo - INFO - []
+2024-06-14 07:40:23,409 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:40:23,420 - project.main - INFO - Trade initiated for , task id: 91ada2a0-09ef-49c6-9938-181e0a6e6743
+2024-06-14 07:40:23,840 - project.db.trades_repo - INFO - []
+2024-06-14 07:40:37,557 - project.db.trades_repo - INFO - []
+2024-06-14 07:40:37,775 - project.db.trades_repo - INFO - []
+2024-06-14 07:41:17,537 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:41:17,548 - project.main - INFO - Trade initiated for , task id: 3f955aec-9ac1-4af8-87e4-425ce1087f52
+2024-06-14 07:41:17,809 - project.db.trades_repo - INFO - []
+2024-06-14 07:41:42,335 - project.db.trades_repo - INFO - []
+2024-06-14 07:41:42,493 - project.db.trades_repo - INFO - []
+2024-06-14 07:42:07,820 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"121","api_secret":"12321","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:42:07,832 - project.main - INFO - Trade initiated for , task id: ed0b06ac-de7c-4c0d-8a78-1307b094e57f
+2024-06-14 07:42:08,068 - project.db.trades_repo - INFO - []
+2024-06-14 07:42:26,093 - project.db.trades_repo - INFO - []
+2024-06-14 07:42:26,256 - project.db.trades_repo - INFO - []
+2024-06-14 07:43:09,235 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"123","api_secret":"13","ticker":"ETHUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:43:09,298 - project.main - INFO - Trade initiated for ETHUSDT, task id: d4caeb20-45df-4cbd-a001-bcbfd5dfd4a3
+2024-06-14 07:43:09,751 - project.db.trades_repo - INFO - []
+2024-06-14 07:43:14,904 - project.db.trades_repo - INFO - []
+2024-06-14 07:43:15,145 - project.db.trades_repo - INFO - []
+2024-06-14 07:45:22,897 - project.db.trades_repo - INFO - []
+2024-06-14 07:45:23,260 - project.db.trades_repo - INFO - []
+2024-06-14 07:45:49,317 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:45:49,331 - project.main - INFO - Trade initiated for BTCUSDT, task id: 1600ab3e-2356-4299-a613-7a1be6d816f4
+2024-06-14 07:45:49,817 - project.db.trades_repo - INFO - []
+2024-06-14 07:45:52,423 - project.db.trades_repo - INFO - []
+2024-06-14 07:45:52,619 - project.db.trades_repo - INFO - []
+2024-06-14 07:46:19,896 - project.db.trades_repo - INFO - []
+2024-06-14 07:46:20,109 - project.db.trades_repo - INFO - []
+2024-06-14 07:47:41,863 - project.db.trades_repo - INFO - []
+2024-06-14 07:47:42,157 - project.db.trades_repo - INFO - []
+2024-06-14 07:48:09,216 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 07:48:09,231 - project.main - INFO - Trade initiated for , task id: 7e7c95fd-a357-468e-8d31-07b897619391
+2024-06-14 07:48:09,831 - project.db.trades_repo - INFO - []
+2024-06-14 07:48:50,527 - project.db.trades_repo - INFO - []
+2024-06-14 07:48:50,926 - project.db.trades_repo - INFO - []
+2024-06-14 07:56:43,548 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 200.0}]
+2024-06-14 07:56:43,622 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 200.0}]
+2024-06-14 08:09:13,511 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 400.0}]
+2024-06-14 08:09:13,512 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 400.0}]
+2024-06-14 08:18:49,304 - project.db.trades_repo - INFO - []
+2024-06-14 08:18:49,309 - project.db.trades_repo - INFO - []
+2024-06-14 08:19:06,712 - project.db.trades_repo - INFO - []
+2024-06-14 08:19:06,856 - project.db.trades_repo - INFO - []
+2024-06-14 08:21:32,125 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 08:21:32,243 - project.main - INFO - Trade initiated for BTCUSDT, task id: 6f030dce-92ba-4a9a-a7fe-b97ec2cd9f78
+2024-06-14 08:21:32,750 - project.db.trades_repo - INFO - []
+2024-06-14 08:21:39,014 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:21:39,056 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:30:05,211 - project.db.trades_repo - INFO - []
+2024-06-14 08:30:05,216 - project.db.trades_repo - INFO - []
+2024-06-14 08:30:07,741 - project.db.trades_repo - INFO - []
+2024-06-14 08:30:07,764 - project.db.trades_repo - INFO - []
+2024-06-14 08:30:33,635 - project.main - INFO - Received trade request: {"user_id":"6645fc04374182fb63383c6d","api_key":"SoHWTX4iK8w2PKorNHdrCfo0XXhtiLh79Fa7ZwLGe1JhuL5IrtI48E6fY1Bzrwdr","api_secret":"aG8YCKL4SPq4WAtruCnZ2nGlWXjGLe9RDXYelMbUimdQl8FP8eABpyWAxwZAOb4o","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-06-14 08:30:33,803 - project.main - INFO - Trade initiated for BTCUSDT, task id: d0889739-b533-42d7-9960-a3ae7e2a3b87
+2024-06-14 08:30:34,019 - project.db.trades_repo - INFO - []
+2024-06-14 08:30:36,823 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:30:36,886 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:31:26,357 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:31:26,501 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:31:52,064 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-14 08:31:52,119 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-16 06:20:42,282 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-16 06:20:42,459 - project.db.trades_repo - INFO - [{'_id': '6645fc04374182fb63383c6d', 'total_investment': 100.0}]
+2024-06-16 08:12:20,750 - project.main - INFO - Stop trade requested for task id: d0889739-b533-42d7-9960-a3ae7e2a3b87
+2024-06-16 08:12:21,462 - project.db.trades_repo - INFO - []
