@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api:
     build:
@@ -16,7 +14,8 @@ services:
       MONGODB_URI: ${MONGODB_URI}
     volumes:
       - .:/app
-    command: uvicorn project.main:app --host 0.0.0.0 --port 8000 --reload
+      - ~/.aws:/root/.aws:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   celery_worker:
     build:
@@ -29,7 +28,9 @@ services:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
       MONGODB_URI: ${MONGODB_URI}
-    command: celery -A project.celery_worker worker --loglevel=info
+    volumes:
+      - ~/.aws:/root/.aws:ro
+    command: celery -A app.celery_worker worker --loglevel=info
 
   redis:
     image: redis:alpine

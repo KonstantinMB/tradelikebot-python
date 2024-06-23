@@ -930,19 +930,19 @@ async def run_bot(user_id: str, api_key: str, api_secret: str, ticker: str, quan
 
             old_remain_buy[ticker] = remain
 
-    # 3.3. Log
-    r_hour = int(showed_remain.seconds / 3600)
-    r_minute = int((showed_remain.seconds - 3600 * r_hour) / 60)
-    r_second = showed_remain.seconds - 3600 * r_hour - 60 * r_minute
-    text = ""
+        # 3.3. Log
+        r_hour = int(showed_remain.seconds / 3600)
+        r_minute = int((showed_remain.seconds - 3600 * r_hour) / 60)
+        r_second = showed_remain.seconds - 3600 * r_hour - 60 * r_minute
+        text = ""
 
-    if showed_remain.days == 0:
-        text = text + " Time to next candle .. %02d:%02d:%02d           " % (r_hour,
-                                                                             r_minute, r_second)
-    else:
-        text = text + " Time to next candle .. %d days %02d:%02d:%02d   " % (showed_remain.days,
-                                                                             r_hour, r_minute,
-                                                                             r_second)
+        if showed_remain.days == 0:
+            text = text + " Time to next candle .. %02d:%02d:%02d           " % (r_hour,
+                                                                                 r_minute, r_second)
+        else:
+            text = text + " Time to next candle .. %d days %02d:%02d:%02d   " % (showed_remain.days,
+                                                                                 r_hour, r_minute,
+                                                                                 r_second)
 
-    print("\r" + cur_time() + text, end="\r")
-    time.sleep(1)
+        print("\r" + cur_time() + text, end="\r")
+        time.sleep(1)
