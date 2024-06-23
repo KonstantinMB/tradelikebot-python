@@ -1,7 +1,7 @@
 FROM python:3.7-slim
 
 # Fix missing libcrypt.so.1
-RUN apt-get update && apt-get install -y libcrypt1
+RUN yum update -y && yum install -y libcrypt.so.1
 
 # Set the working directory in the container
 WORKDIR /app
