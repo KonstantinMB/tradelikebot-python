@@ -8,6 +8,7 @@ celery_app = Celery(
 
 # Optional: Configure Celery to manage tasks better
 celery_app.conf.update(
+    broker_connection_retry_on_startup=True,
     task_serializer='json',
     accept_content=['json'],  # Accept only JSON content
     result_serializer='json',
