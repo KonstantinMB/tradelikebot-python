@@ -802,8 +802,8 @@ def check_bband_buy_signal(symbol_pair, latest_close, latest_lower_bband_price):
                 f"(Latest Lower Bollinger Band: {latest_lower_bband_price} / Latest Close: {latest_close})")
         return True
 
-async def run_bot(user_id: str, api_key: str, api_secret: str, ticker: str, quantity: float, timeframe: str,
-                  demo: bool):
+async def run_bot(db_created_trade_id: str, api_key: str, api_secret: str, ticker: str, quantity: float,
+                  timeframe: str, demo: bool):
 
     buy_timedelta, buy_timeframe, buy_order_type, order_size_dict, h_period, demo, buy_limit = (
         configure_api_parameters(ticker=ticker, quantity=quantity, pair_timeframe=timeframe, demo=demo)
@@ -820,10 +820,6 @@ async def run_bot(user_id: str, api_key: str, api_secret: str, ticker: str, quan
     set_dicts(symbols)
 
     std_log("[Booting] Complete")
-
-    persisted_trade = False
-
-    trade_id = user_trade_mapping.get(user_id, None)
 
     # Trading Bot Starts Executing 👇
     while True:
@@ -859,7 +855,7 @@ async def run_bot(user_id: str, api_key: str, api_secret: str, ticker: str, quan
                     if position_status == OrderStatus.POSITION:
 
                         first_target_order = False
-                        await trade_db.update_trade(trade_id, {
+                        await trade_db.update_trade(db_created_trade_id, {
                                                                            "take_profit_price": latest_upper_bband_price,
                                                                            "order_status": "POSITION"
                                                                          })
@@ -882,14 +878,16 @@ async def run_bot(user_id: str, api_key: str, api_secret: str, ticker: str, quan
                                                            take_profit_order_id,
                                                            target_order_qty[ticker],
                                                            latest_upper_bband_price)
-                                await trade_db.update_trade(trade_id,{"take_profit_price": latest_upper_bband_price})
+                                await trade_db.update_trade(db_created_trade_id,
+                                                            {"take_profit_price": latest_upper_bband_price})
                             else:
                                 reset_dict_for_symbol(ticker)
                     else:
 
                         binance.replace_position_with_new_order(ticker, order_id, rounded_qty,
                                                                 latest_lower_bband_price)
-                        await trade_db.update_trade(trade_id, {"price": latest_lower_bband_price})
+                        await trade_db.update_trade(db_created_trade_id,
+                                                    {"price": latest_lower_bband_price})
 
                 # Place to add additional indicators / validations
                 conditions_met = custom_Nate_conditions(binance, ticker, order_size_dict)
@@ -907,26 +905,12 @@ async def run_bot(user_id: str, api_key: str, api_secret: str, ticker: str, quan
                             if buy_order_type[ticker] == "LMT":
                                 binance.Buy(ticker, rounded_qty, latest_lower_bband_price)
                                 buy_symbol_pair_order_counter[ticker] += 1
-                                await trade_db.update_trade(trade_id, {"price": latest_lower_bband_price})
+                                await trade_db.update_trade(db_created_trade_id,
+                                                            {"price": latest_lower_bband_price})
 
                         else:
                             std_log(
                                 "[%s] Bollinger Band Condition Not Met For BUY Position . No Order/Positions Set.")
-
-            if persisted_trade is False:
-                created_trade_id = await trade_db.create_trade({
-                    "user_id": user_id,
-                    "api_key": api_key,
-                    "api_secret": api_secret,
-                    "ticker": ticker,
-                    "quantity": order_size_dict[ticker],
-                    "timeframe": timeframe,
-                    "price": 0,
-                    "take_profit_price": 0,
-                    "order_status": "OPEN_ORDER",
-                })
-                user_trade_mapping[user_id] = created_trade_id
-                persisted_trade = True
 
             old_remain_buy[ticker] = remain
 

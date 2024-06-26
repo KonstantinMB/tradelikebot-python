@@ -99,8 +99,22 @@ async def trade(request: TradeRequest):
     try:
         logger.info(f"Received trade request: {request.json()}")
 
+        trade_data = {
+                    "user_id": request.user_id,
+                    "api_key": encrypt_data(request.api_key, encryption_key),
+                    "api_secret": encrypt_data(request.api_secret, encryption_key),
+                    "ticker": request.ticker,
+                    "quantity": request.quantity,
+                    "timeframe": request.timeframe,
+                    "price": 0,
+                    "take_profit_price": 0,
+                    "order_status": "OPEN_ORDER",
+        }
+
+        db_created_trade_id = await trade_db.create_trade(trade_data)
+
         task = execute_trade.delay(
-            user_id=request.user_id,
+            db_created_trade_id=db_created_trade_id,
             api_key=encrypt_data(request.api_key, encryption_key),
             api_secret=encrypt_data(request.api_secret, encryption_key),
             ticker=request.ticker,

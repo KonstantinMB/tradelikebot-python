@@ -1,2 +1,4 @@
 2024-06-23 19:51:03,719 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
 2024-06-23 19:51:04,376 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-06-26 13:42:27,995 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-06-26 18:28:34,319 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
