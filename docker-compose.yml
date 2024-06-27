@@ -30,7 +30,7 @@ services:
       MONGODB_URI: ${MONGODB_URI}
     volumes:
       - ~/.aws:/root/.aws:ro
-    command: celery -A app.celery_worker worker --loglevel=info
+    command: celery -A app.celery_worker worker --loglevel=info -P solo
 
   redis:
     image: redis:alpine
