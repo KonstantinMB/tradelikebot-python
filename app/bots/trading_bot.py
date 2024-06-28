@@ -37,7 +37,13 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), "test")
+db_name = ''
+if str(os.getenv('DB_ENV')) == "prod":
+    db_name = "prod_tradelikebot_db"
+else:
+    db_name = "test_tradelikebot_db"
+
+mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), db_name)
 trade_db = TradeDB(mongo_db)
 user_db = UserDB(mongo_db)
 user_task_db = UserTaskDB(mongo_db)

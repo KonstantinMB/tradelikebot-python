@@ -1,12 +1,9 @@
-# main.py
-from celery.app.control import Control
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from .celery_worker import execute_trade, stop_trade
 from fastapi.responses import JSONResponse
 from celery.result import AsyncResult
-from .celery_config import celery_app
 from pydantic import BaseModel
 from .db.base_repo import MongoDB
 from .db.trades_repo import TradeDB
@@ -23,15 +20,19 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://www.tradelikebot.com", "https://www.tradelikebot.com", "https://bot.tradelikebot.com", "https://tradelikebot.com"],  # Add your frontend URL here
+    allow_origins=["https://www.tradelikebot.com", "https://bot.tradelikebot.com", "https://tradelikebot.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-celery_control = Control(app=celery_app)
+db_name = ''
+if str(os.getenv('DB_ENV')) == "prod":
+    db_name = "prod_tradelikebot_db"
+else:
+    db_name = "test_tradelikebot_db"
 
-mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), "test")
+mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), db_name)
 trade_db = TradeDB(mongo_db)
 user_task_db = UserTaskDB(mongo_db)
 

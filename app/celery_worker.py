@@ -1,7 +1,9 @@
-from celery.result import AsyncResult
 import asyncio
-from .celery_config import celery_app
 from .bots.trading_bot import run_bot
+from .celery_config import celery_app
+from celery.app.control import Control
+
+celery_control = Control(app=celery_app)
 
 @celery_app.task(name="execute_trade")
 def execute_trade(db_created_trade_id, api_key, api_secret, ticker, quantity, timeframe, demo):
@@ -17,6 +19,4 @@ def stop_trade(task_id):
 
 def stop_task(task_id: str):
 
-    task_result = AsyncResult(task_id)
-    if task_result:
-        task_result.revoke(terminate=True)
+    celery_control.revoke(task_id, terminate=True)
