@@ -2,6 +2,7 @@
 2024-06-23 19:51:04,376 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
 2024-06-26 13:42:27,995 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
 2024-06-26 18:28:34,319 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+<<<<<<< HEAD
 2024-07-07 07:28:38,865 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
 2024-07-07 07:28:39,354 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
 2024-07-07 07:28:55,384 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"123","api_secret":"123","ticker":"BTCUSDT","quantity":123.0,"timeframe":"4h","demo":false}
@@ -9,3 +10,101 @@
 2024-07-07 07:28:56,186 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
 2024-07-07 07:29:00,629 - app.main - INFO - Stop trade requested for task id: 315ca018-399f-4212-8a0a-57eb1f4d6b8c
 2024-07-07 07:29:01,454 - app.db.trades_repo - INFO - []
+=======
+2024-07-07 05:17:35,863 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 05:17:36,764 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 05:46:59,634 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 05:47:01,041 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 05:47:17,855 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"132","api_secret":"13123","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-07-07 05:47:18,055 - app.main - INFO - Trade initiated for BTCUSDT, task id: e09f23e4-77f8-40de-a1ec-318e9954da62
+2024-07-07 05:47:20,138 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 100.0}]
+2024-07-07 05:50:29,602 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 100.0}]
+2024-07-07 05:50:30,156 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 100.0}]
+2024-07-07 05:50:36,108 - app.main - INFO - Stop trade requested for task id: e09f23e4-77f8-40de-a1ec-318e9954da62
+2024-07-07 05:50:36,542 - app.db.trades_repo - INFO - []
+2024-07-07 06:08:15,776 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:08:29,555 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:08:30,224 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:10:23,268 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:10:23,786 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:11:15,674 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:11:16,250 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:17:43,088 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:17:43,769 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:17:46,987 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:17:47,418 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:17:59,243 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:17:59,842 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:23:37,618 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:23:38,179 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:25:05,158 - app.db.trades_repo - INFO - []
+2024-07-07 06:25:05,161 - app.db.trades_repo - INFO - []
+2024-07-07 06:25:26,703 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"desisi","api_secret":"2344","ticker":"BTCUSDT","quantity":123.0,"timeframe":"4h","demo":false}
+2024-07-07 06:25:26,939 - app.main - INFO - Trade initiated for BTCUSDT, task id: 20299737-ff6b-419d-b3fc-c46fd8ff4160
+2024-07-07 06:25:27,829 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 06:25:48,707 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 06:25:48,849 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 06:26:04,011 - app.main - INFO - Stop trade requested for task id: 20299737-ff6b-419d-b3fc-c46fd8ff4160
+2024-07-07 06:26:04,590 - app.db.trades_repo - INFO - []
+2024-07-07 06:26:08,949 - app.db.trades_repo - INFO - []
+2024-07-07 06:26:09,059 - app.db.trades_repo - INFO - []
+2024-07-07 06:27:52,373 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:27:52,953 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:28:58,782 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:28:59,288 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:35:33,898 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:38:05,420 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:38:05,845 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:38:27,862 - app.db.trades_repo - INFO - []
+2024-07-07 06:38:27,875 - app.db.trades_repo - INFO - []
+2024-07-07 06:38:37,808 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"qwe","api_secret":"qwe","ticker":"BTCUSDT","quantity":100.0,"timeframe":"4h","demo":false}
+2024-07-07 06:38:37,989 - app.main - INFO - Trade initiated for BTCUSDT, task id: e9485fb3-d27a-49dc-9fa5-573663b7dd98
+2024-07-07 06:38:38,307 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 100.0}]
+2024-07-07 06:38:44,957 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 100.0}]
+2024-07-07 06:38:45,114 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 100.0}]
+2024-07-07 06:38:50,350 - app.main - INFO - Stop trade requested for task id: e9485fb3-d27a-49dc-9fa5-573663b7dd98
+2024-07-07 06:38:50,898 - app.db.trades_repo - INFO - []
+2024-07-07 06:39:44,859 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:39:45,619 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:43:49,176 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:43:49,616 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:45:27,099 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"123","api_secret":"123","ticker":"BTCUSDT","quantity":123.0,"timeframe":"4h","demo":false}
+2024-07-07 06:45:27,292 - app.main - INFO - Trade initiated for BTCUSDT, task id: babf5d1c-fe71-4b71-9dff-e0c290e87766
+2024-07-07 06:45:27,811 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 06:45:35,933 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 06:45:36,058 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 06:47:55,837 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:47:56,293 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:49:05,852 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:49:06,370 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:49:11,873 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:49:12,292 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:49:17,497 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:49:18,034 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:52:20,195 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 06:52:20,617 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:04:11,792 - app.db.trades_repo - INFO - []
+2024-07-07 07:04:11,793 - app.db.trades_repo - INFO - []
+2024-07-07 07:04:18,621 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"123","api_secret":"123","ticker":"BTCUSDT","quantity":123.0,"timeframe":"4h","demo":false}
+2024-07-07 07:04:18,827 - app.main - INFO - Trade initiated for BTCUSDT, task id: 173fee9c-f089-45fb-a0a2-d6d5e4567611
+2024-07-07 07:04:19,277 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 07:05:21,797 - app.main - INFO - Stop trade requested for task id: 173fee9c-f089-45fb-a0a2-d6d5e4567611
+2024-07-07 07:05:22,204 - app.db.trades_repo - INFO - []
+2024-07-07 07:07:30,089 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"123","api_secret":"123","ticker":"BTCUSDT","quantity":123.0,"timeframe":"4h","demo":false}
+2024-07-07 07:07:30,177 - app.main - INFO - Trade initiated for BTCUSDT, task id: 5dd557da-afbe-45e1-8243-d4a4c6bac735
+2024-07-07 07:07:30,545 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 07:07:42,413 - app.main - INFO - Stop trade requested for task id: 5dd557da-afbe-45e1-8243-d4a4c6bac735
+2024-07-07 07:07:42,877 - app.db.trades_repo - INFO - []
+2024-07-07 07:10:37,441 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:10:37,988 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:13:12,759 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:14:22,783 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:14:23,417 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:15:49,628 - app.main - INFO - Received trade request: {"user_id":"667c1899d39399487884de0e","api_key":"123","api_secret":"123","ticker":"BTCUSDT","quantity":123.0,"timeframe":"4h","demo":false}
+2024-07-07 07:15:49,839 - app.main - INFO - Trade initiated for BTCUSDT, task id: dd0f4a17-1fdb-441f-94af-d1e2be4c41d8
+2024-07-07 07:15:50,145 - app.db.trades_repo - INFO - [{'_id': '667c1899d39399487884de0e', 'total_investment': 123.0}]
+2024-07-07 07:16:39,533 - app.main - INFO - Stop trade requested for task id: dd0f4a17-1fdb-441f-94af-d1e2be4c41d8
+2024-07-07 07:16:40,049 - app.db.trades_repo - INFO - []
+2024-07-07 07:17:27,928 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2024-07-07 07:17:28,378 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+>>>>>>> 56e4c37 (fix celery task stopage)
