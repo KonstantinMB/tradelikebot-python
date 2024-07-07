@@ -37,13 +37,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-db_name = ''
-if str(os.getenv('DB_ENV')) == "prod":
-    db_name = "prod_tradelikebot_db"
-else:
-    db_name = "test_tradelikebot_db"
-
-mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), db_name)
+mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), "test")
 trade_db = TradeDB(mongo_db)
 user_db = UserDB(mongo_db)
 user_task_db = UserTaskDB(mongo_db)
@@ -808,7 +802,7 @@ def check_bband_buy_signal(symbol_pair, latest_close, latest_lower_bband_price):
                 f"(Latest Lower Bollinger Band: {latest_lower_bband_price} / Latest Close: {latest_close})")
         return True
 
-async def run_bot(db_created_trade_id: str, api_key: str, api_secret: str, ticker: str, quantity: float,
+async def run_bot(self, db_created_trade_id: str, api_key: str, api_secret: str, ticker: str, quantity: float,
                   timeframe: str, demo: bool):
 
     buy_timedelta, buy_timeframe, buy_order_type, order_size_dict, h_period, demo, buy_limit = (
@@ -825,10 +819,15 @@ async def run_bot(db_created_trade_id: str, api_key: str, api_secret: str, ticke
     old_remain_buy = {ticker: datetime.timedelta(days=365)}
     set_dicts(symbols)
 
-    std_log("[Booting] Complete")
+    std_log(f"[Booting] Complete. Starting Bot Execution With Trade ID: [{db_created_trade_id}]")
 
     # Trading Bot Starts Executing 👇
     while True:
+
+        if self.is_aborted():
+            message = f"Task for trade with ID [{db_created_trade_id}] has been aborted!"
+            print(message)
+            return f"Task for trade with ID [{db_created_trade_id}] has been aborted!"
 
         showed_remain = datetime.timedelta(days=365)  # To show remain time to candle closing
 

@@ -1,9 +1,12 @@
+# main.py
+from celery.app.control import Control
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-from .celery_worker import execute_trade, stop_trade
+from .celery_worker import execute_trade
 from fastapi.responses import JSONResponse
 from celery.result import AsyncResult
+from .celery_config import celery_app
 from pydantic import BaseModel
 from .db.base_repo import MongoDB
 from .db.trades_repo import TradeDB
@@ -20,17 +23,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.tradelikebot.com", "https://bot.tradelikebot.com", "https://tradelikebot.com"],
+    allow_origins=["http://localhost:3000","http://www.tradelikebot.com", "https://www.tradelikebot.com", "https://bot.tradelikebot.com", "https://tradelikebot.com"],  # Add your frontend URL here
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# db_name = ''
-# if str(os.getenv('DB_ENV')) == "prod":
-#     db_name = "prod_tradelikebot_db"
-# else:
-#     db_name = "test_tradelikebot_db"
+celery_control = Control(app=celery_app)
 
 mongo_db = MongoDB(str(os.getenv('MONGODB_URI')), "test")
 trade_db = TradeDB(mongo_db)
@@ -101,15 +100,15 @@ async def trade(request: TradeRequest):
         logger.info(f"Received trade request: {request.json()}")
 
         trade_data = {
-                    "user_id": request.user_id,
-                    "api_key": encrypt_data(request.api_key, encryption_key),
-                    "api_secret": encrypt_data(request.api_secret, encryption_key),
-                    "ticker": request.ticker,
-                    "quantity": request.quantity,
-                    "timeframe": request.timeframe,
-                    "price": 0,
-                    "take_profit_price": 0,
-                    "order_status": "OPEN_ORDER",
+            "user_id": request.user_id,
+            "api_key": encrypt_data(request.api_key, encryption_key),
+            "api_secret": encrypt_data(request.api_secret, encryption_key),
+            "ticker": request.ticker,
+            "quantity": request.quantity,
+            "timeframe": request.timeframe,
+            "price": 0,
+            "take_profit_price": 0,
+            "order_status": "OPEN_ORDER",
         }
 
         db_created_trade_id = await trade_db.create_trade(trade_data)
@@ -143,7 +142,7 @@ async def stop(request: StopRequest):
 
     # Stop the Celery task
     task_id = user_task["task_id"]
-    stop_trade.delay(task_id)
+    execute_trade.AsyncResult(task_id).abort()
     logger.info(f"Stop trade requested for task id: {task_id}")
 
     # Fetch the trade associated with the user_id and task_id
